@@ -1,25 +1,12 @@
 {
   "version": "4",
   "specifiers": {
-    "jsr:@std/assert@^1.0.10": "1.0.10",
-    "jsr:@std/internal@^1.0.5": "1.0.5",
     "npm:reflect-metadata@*": "0.2.2",
-    "npm:reflect-metadata@0.1.13": "0.1.13"
-  },
-  "jsr": {
-    "@std/assert@1.0.10": {
-      "integrity": "59b5cbac5bd55459a19045d95cc7c2ff787b4f8527c0dd195078ff6f9481fbb3",
-      "dependencies": [
-        "jsr:@std/internal"
-      ]
-    },
-    "@std/internal@1.0.5": {
-      "integrity": "54a546004f769c1ac9e025abd15a76b6671ddc9687e2313b67376125650dc7ba"
-    }
+    "npm:reflect-metadata@~0.1.13": "0.1.14"
   },
   "npm": {
-    "reflect-metadata@0.1.13": {
-      "integrity": "sha512-Ts1Y/anZELhSsjMcU605fU9RE4Oi3p5ORujwbIKXfWa+0Zxs510Qrmrce5/Jowq3cHSZSJqBjypxmHarc+vEWg=="
+    "reflect-metadata@0.1.14": {
+      "integrity": "sha512-ZhYeb6nRaXCfhnndflDK8qI6ZQ/YcWZCISRAWICW9XYqMUwjZM9Z0DveWX/ABN01oxSHwVxKQmxeYZSsm0jh5A=="
     },
     "reflect-metadata@0.2.2": {
       "integrity": "sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q=="
@@ -41,7 +28,8 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/assert@^1.0.10"
+      "jsr:@std/assert@^1.0.10",
+      "npm:reflect-metadata@~0.1.13"
     ]
   }
 }
