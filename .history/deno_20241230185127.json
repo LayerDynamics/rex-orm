@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "importMap": "./import_map.json",
+  "tasks": {
+    "dev": "deno run --watch main.ts",
+    "test": "deno test --allow-read --importmap=import_map.json"

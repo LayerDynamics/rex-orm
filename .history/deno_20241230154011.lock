@@ -1,0 +1,23 @@
+{
+  "version": "4",
+  "specifiers": {
+    "npm:reflect-metadata@*": "0.2.2"
+  },
+  "npm": {
+    "reflect-metadata@0.2.2": {
+      "integrity": "sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q=="
+    }
+  },
+  "redirects": {
+    "https://deno.land/x/reflect_metadata/mod.ts": "https://deno.land/x/reflect_metadata@v0.1.12-2/mod.ts"
+  },
+  "remote": {
+    "https://deno.land/x/reflect_metadata@v0.1.12-2/Reflect.ts": "f629ad7988465fff50dd34d0b969557d85bb175a0c43fe9af3e066b4993a31e7",
+    "https://deno.land/x/reflect_metadata@v0.1.12-2/mod.ts": "8b5e3b20f1e604c118df433e84a409b1d5116e885001047134cc42ecf84fa2cd"
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@std/assert@1"
+    ]
+  }
+}

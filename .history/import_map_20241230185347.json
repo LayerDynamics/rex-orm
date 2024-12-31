@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "@/": "./src/",
+    "@std/": "https://deno.land/std@0.182.0/",
+    "reflect-metadata": "https://deno.land/x/reflect_metadata@v0.1.12-2/mod.ts"
+  }
+}

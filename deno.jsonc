@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": true
+  },
+  "importMap": "./import_map.json",
+  "tasks": {
+    "test": "deno test --allow-read"
+  }
+}

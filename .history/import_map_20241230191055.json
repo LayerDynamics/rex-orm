@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "@/": "./src/",
+    "testing/": "https://deno.land/std@0.182.0/testing/",
+    "testing/asserts": "https://deno.land/std@0.182.0/testing/asserts.ts",
+    "reflect-metadata": "npm:reflect-metadata@0.1.13"
+  }
+}
