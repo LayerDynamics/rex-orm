@@ -1,35 +1,6 @@
 import { assertEquals, assertThrows } from "../../../deps.ts";
 import { QueryBuilder } from "../../../query/QueryBuilder.ts";
-import { DatabaseAdapter, QueryResult } from "../../../interfaces/DatabaseAdapter.ts";
-
-class MockDatabaseAdapter implements DatabaseAdapter {
-  connect(): Promise<void> {
-    return Promise.resolve();
-  }
-  
-  disconnect(): Promise<void> {
-    return Promise.resolve();
-  }
-  
-  execute(query: string, params: any[] = []): Promise<QueryResult> {
-    return Promise.resolve({
-      rows: [{ query, params }],
-      rowCount: 1,
-    });
-  }
-  
-  beginTransaction(): Promise<void> {
-    return Promise.resolve();
-  }
-  
-  commit(): Promise<void> {
-    return Promise.resolve();
-  }
-  
-  rollback(): Promise<void> {
-    return Promise.resolve();
-  }
-}
+import { MockDatabaseAdapter } from "../../mocks/MockDatabaseAdapter.ts";
 
 Deno.test("QueryBuilder constructs and executes SELECT queries", async () => {
   // ...existing code...
@@ -62,8 +33,8 @@ Deno.test("QueryBuilder handles empty WHERE conditions", async () => {
     .execute(adapter);
 
   assertEquals(result.rowCount, 1);
-  assertEquals(result.rows[0].query, "SELECT id, name FROM users");
-  assertEquals(result.rows[0].params, []);
+  assertEquals(result.debug?.query, "SELECT id, name FROM users");
+  assertEquals(result.debug?.params, []);
 });
 
 Deno.test("QueryBuilder handles multiple WHERE conditions", async () => {
@@ -78,8 +49,8 @@ Deno.test("QueryBuilder handles multiple WHERE conditions", async () => {
     .execute(adapter);
 
   assertEquals(result.rowCount, 1);
-  assertEquals(result.rows[0].query, "SELECT id, name FROM users WHERE age > $1 AND status = $2");
-  assertEquals(result.rows[0].params, [18, "active"]);
+  assertEquals(result.debug?.query, "SELECT id, name FROM users WHERE age > $1 AND status = $2");
+  assertEquals(result.debug?.params, [18, "active"]);
 });
 
 Deno.test("QueryBuilder resets after execution", async () => {

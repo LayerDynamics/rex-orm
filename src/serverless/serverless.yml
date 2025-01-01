@@ -1,0 +1,41 @@
+service: rex-orm-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: provided.al2
+  region: us-east-1
+  memorySize: 1024
+  timeout: 30
+  environment:
+    DATABASE_TYPE: ${env:DATABASE_TYPE}
+    DATABASE_URL: ${env:DATABASE_URL}
+    REALTIME_PORT: ${env:REALTIME_PORT}
+    GRAPHQL_PORT: ${env:GRAPHQL_PORT}
+
+functions:
+  graphql:
+    handler: handler.graphqlHandler
+    events:
+      - http:
+          path: graphql
+          method: post
+          cors: true
+      - http:
+          path: graphql
+          method: get
+          cors: true
+
+  realtime:
+    handler: handler.realtimeHandler
+    events:
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+      - websocket:
+          route: sendmessage
+
+plugins:
+  - serverless-plugin-custom-runtime

@@ -9,6 +9,7 @@
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.10",
-    "reflect-metadata": "npm:reflect-metadata@^0.1.13"
+    "reflect-metadata": "npm:reflect-metadata@^0.1.13",
+    "ws": "npm:ws@^8.18.0"
   }
 }

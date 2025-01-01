@@ -2,10 +2,11 @@ import { defineMetadata, hasMetadata } from "../deps.ts";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 
 export interface EntityOptions {
-  tableName: string;
+  name?: string;
+  tableName?: string;
 }
 
-export function Entity(options: EntityOptions) {
+export function Entity(options: EntityOptions = {}) {
   return function <T extends { new (...args: any[]): {} }>(target: T) {
     // Initialize columns array if not exists
     if (!hasMetadata("columns", target)) {

@@ -1,6 +1,10 @@
 export interface QueryResult {
   rows: any[];
   rowCount: number;
+  debug?: {
+    query: string;
+    params: any[];
+  };
 }
 
 export interface DatabaseAdapter {
@@ -10,4 +14,6 @@ export interface DatabaseAdapter {
   beginTransaction(): Promise<void>;
   commit(): Promise<void>;
   rollback(): Promise<void>;
+  findById(model: any, id: any): Promise<any>;
+  findAll(model: any): Promise<any[]>;
 }
