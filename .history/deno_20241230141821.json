@@ -1,8 +1,0 @@
-{
-  "importMap": "./import_map.json",
-  "tasks": {
-  },
-  "imports": {
-    "@std/assert": "jsr:@std/assert@1"
-  }
-}
