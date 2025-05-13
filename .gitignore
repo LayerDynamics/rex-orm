@@ -11,3 +11,4 @@ test_runner.ts
 main_test.ts
 .deno_lsp
 .vscode
+deno.lock
