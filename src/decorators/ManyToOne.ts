@@ -8,20 +8,48 @@ interface ManyToOneOptions {
   inverse: (object: any) => any;
 }
 
-export function ManyToOne(p0: () => typeof User, p1: string, options: ManyToOneOptions) {
-  return function (target: any, propertyKey: string) {
+// Fix the signature to accept options object instead of separate parameters
+export function ManyToOne(options: ManyToOneOptions): PropertyDecorator;
+export function ManyToOne(
+  targetClass: () => any,
+  propertyName: string,
+  options: ManyToOneOptions,
+): PropertyDecorator;
+export function ManyToOne(
+  optionsOrTargetClass: ManyToOneOptions | (() => any),
+  propertyName?: string,
+  options?: ManyToOneOptions,
+): PropertyDecorator {
+  return function (target: any, propertyKey: string | symbol) {
     if (!getMetadata("relations", target.constructor)) {
       defineMetadata("relations", [], target.constructor);
     }
+
     const relations = getMetadata("relations", target.constructor) as any[];
-    const metadata = {
-      type: "ManyToOne",
-      targetName: options.target(),
-      inverse: options.inverse,
-      propertyKey,
-    };
+    let metadata;
+
+    // Handle both forms of invocation
+    if (typeof optionsOrTargetClass === "function" && propertyName && options) {
+      // Old style: ManyToOne(targetClass, propertyName, options)
+      metadata = {
+        type: "ManyToOne",
+        targetName: options.target(),
+        inverse: options.inverse,
+        propertyKey,
+      };
+    } else {
+      // New style: ManyToOne(options)
+      const opts = optionsOrTargetClass as ManyToOneOptions;
+      metadata = {
+        type: "ManyToOne",
+        targetName: opts.target(),
+        inverse: opts.inverse,
+        propertyKey,
+      };
+    }
+
     relations.push(metadata);
     defineMetadata("relations", relations, target.constructor);
-    ModelRegistry.registerRelation(target.constructor, metadata);
+    ModelRegistry.registerRelation(target.constructor as unknown as Constructor, metadata);
   };
 }

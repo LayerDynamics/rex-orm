@@ -47,16 +47,21 @@ export class GraphQLSchemaGenerator {
               targetModel as ModelConstructor,
             );
 
+            // Convert symbol propertyKey to string if needed
+            const fieldName = typeof relation.propertyKey === 'symbol' 
+              ? relation.propertyKey.toString().replace(/Symbol\(|\)/g, '')
+              : relation.propertyKey;
+
             switch (relation.type) {
               case "OneToMany":
-                fields[relation.propertyKey] = {
+                fields[fieldName] = {
                   type: new graphql.GraphQLList(targetType),
                   args: {},
                 };
                 break;
               case "ManyToOne":
               case "OneToOne":
-                fields[relation.propertyKey] = {
+                fields[fieldName] = {
                   type: targetType,
                   args: {},
                 };

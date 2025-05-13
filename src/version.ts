@@ -4,7 +4,7 @@
 /**
  * The current version of Rex-ORM
  */
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 
 /**
  * Release date of the current version

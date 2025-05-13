@@ -5,11 +5,14 @@ import { WebSocketServer } from "../../../realtime/WebSocketServer.ts";
 import { EventEmitter } from "../../../realtime/EventEmitter.ts";
 import { SubscriptionManager } from "../../../realtime/SubscriptionManager.ts";
 import { Event } from "../../../realtime/types.ts";
-import { RawData, WebSocket } from "npm:ws@8.18.0";
 import { delay } from "https://deno.land/std@0.203.0/async/delay.ts";
+// Use the native WebSocket API instead of a module
+import { WebSocket } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 
+type RawData=string|Uint8Array;
 Deno.test({
   name: "WebSocketServer broadcasts events to subscribed clients",
+  ignore: !Deno.permissions || (await Deno.permissions.query({ name: "net" })).state !== "granted",
   async fn() {
     const port = 8081;
     const eventEmitter = new EventEmitter();

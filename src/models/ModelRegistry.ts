@@ -19,7 +19,7 @@ interface RelationMetadata {
   targetName: string;
   inverse: (object: unknown) => unknown;
   joinTable?: string;
-  propertyKey: string;
+  propertyKey: string | symbol;
 }
 
 interface ModelMetadata {

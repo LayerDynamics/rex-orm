@@ -48,12 +48,20 @@ export function Audited(options: {
     // Override save method to create audit records
     const originalSave = constructor.prototype.save;
     constructor.prototype.save = async function (adapter: any): Promise<void> {
-      if (!this._originalValues) {
-        this._originalValues = {};
+      // Create a public getter for accessing protected properties
+      const getOriginalValues = () => (this as any)._originalValues;
+      const setOriginalValues = (values: Record<string, any>) =>
+        (this as any)._originalValues = values;
+      const checkIsNew = () =>
+        (this as any).id === undefined || (this as any).id === null ||
+        (this as any).id === 0;
+
+      if (!getOriginalValues()) {
+        setOriginalValues({});
       }
 
       // Track if it's an update or insert
-      const isNew = this.isNew();
+      const isNew = checkIsNew();
       const action = isNew ? "INSERT" : "UPDATE";
 
       // Create an audit record with changes
@@ -71,11 +79,11 @@ export function Audited(options: {
 
           // If field changed, record the change
           if (
-            this._originalValues[field] !== undefined &&
-            this._originalValues[field] !== (this as any)[field]
+            getOriginalValues()[field] !== undefined &&
+            getOriginalValues()[field] !== (this as any)[field]
           ) {
             changes[field] = {
-              old: this._originalValues[field],
+              old: getOriginalValues()[field],
               new: (this as any)[field],
             };
           }
@@ -137,7 +145,7 @@ export function Audited(options: {
       }
 
       // Reset original values after save
-      this._originalValues = {};
+      setOriginalValues({});
     };
 
     // Override delete to audit deletions
