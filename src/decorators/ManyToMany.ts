@@ -1,7 +1,7 @@
-import { defineMetadata, getMetadata } from "../deps.ts";
+import "reflect-metadata";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 
-type Constructor<T = any> = { new(...args: any[]): T };
+type Constructor<T = any> = { new (...args: any[]): T };
 
 interface ManyToManyOptions {
   target: () => Constructor;
@@ -11,10 +11,13 @@ interface ManyToManyOptions {
 
 export function ManyToMany(options: ManyToManyOptions) {
   return function (target: any, propertyKey: string) {
-    if (!getMetadata("relations", target.constructor)) {
-      defineMetadata("relations", [], target.constructor);
+    if (!Reflect.hasMetadata("relations", target.constructor)) {
+      Reflect.defineMetadata("relations", [], target.constructor);
     }
-    const relations = getMetadata("relations", target.constructor) as any[];
+    const relations = Reflect.getMetadata(
+      "relations",
+      target.constructor,
+    ) as any[];
     const metadata = {
       type: "ManyToMany",
       target: options.target(),
@@ -24,7 +27,7 @@ export function ManyToMany(options: ManyToManyOptions) {
       propertyKey,
     };
     relations.push(metadata);
-    defineMetadata("relations", relations, target.constructor);
+    Reflect.defineMetadata("relations", relations, target.constructor);
     ModelRegistry.registerRelation(target.constructor, metadata);
   };
 }

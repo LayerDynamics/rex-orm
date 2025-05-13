@@ -1,20 +1,60 @@
 import { ModelRegistry } from "./ModelRegistry.ts";
 import { RealTimeSync } from "../realtime/index.ts";
+import { DatabaseAdapter } from "../interfaces/DatabaseAdapter.ts";
+import { TransactionManager } from "../transactions/TransactionManager.ts";
+import { ModelEventType } from "./types.ts";
+
+// Fix naming conflict by renaming the local interface
+interface ModelRealTimeSync {
+  emit(data: any): void;
+  // ...other methods...
+}
 
 export abstract class BaseModel {
-  protected static realTimeSync: RealTimeSync;
+  // Update the type reference
+  protected static realTimeSync: ModelRealTimeSync | null = null;
+  protected _isNew = true;
+  protected _isDirty = false;
+  protected _originalValues: Record<string, any> = {};
   abstract id: number; // Change to abstract property
 
   constructor() {
-    ModelRegistry.registerModel(this.constructor as { new(...args: any[]): BaseModel });
+    ModelRegistry.registerModel(
+      this.constructor as { new (...args: any[]): BaseModel },
+    );
+    this.trackChanges();
   }
 
-  static initializeRealTimeSync(realTimeSync: RealTimeSync) {
-    this.realTimeSync = realTimeSync;
+  private trackChanges() {
+    const handler = {
+      set: (target: any, prop: string, value: any) => {
+        if (target[prop] !== value) {
+          if (!this._originalValues.hasOwnProperty(prop)) {
+            this._originalValues[prop] = target[prop];
+          }
+          this._isDirty = true;
+        }
+        target[prop] = value;
+        return true;
+      },
+    };
+    return new Proxy(this, handler);
+  }
+
+  // Update method signature
+  static initializeRealTimeSync(sync: ModelRealTimeSync): void {
+    this.realTimeSync = sync;
+  }
+
+  // Add method to safely access protected realTimeSync property
+  static getRealTimeSync(): ModelRealTimeSync | null {
+    return this.realTimeSync;
   }
 
   validate(): void {
-    const metadata = ModelRegistry.getModelMetadata(this.constructor as { new(...args: any[]): BaseModel });
+    const metadata = ModelRegistry.getModelMetadata(
+      this.constructor as { new (...args: any[]): BaseModel },
+    );
     const validations = metadata.validations;
     for (const [property, validators] of Object.entries(validations)) {
       const value = (this as any)[property];
@@ -23,7 +63,9 @@ export abstract class BaseModel {
         if (result === false) {
           throw new Error(`Validation failed for property '${property}'.`);
         } else if (typeof result === "string") {
-          throw new Error(`Validation failed for property '${property}': ${result}`);
+          throw new Error(
+            `Validation failed for property '${property}': ${result}`,
+          );
         }
       }
     }
@@ -35,30 +77,110 @@ export abstract class BaseModel {
 
   toJSON(): Record<string, any> {
     const json: Record<string, any> = {};
-    const metadata = ModelRegistry.getModelMetadata(this.constructor as { new(...args: any[]): BaseModel });
+    const metadata = ModelRegistry.getModelMetadata(
+      this.constructor as { new (...args: any[]): BaseModel },
+    );
     for (const column of metadata.columns) {
       json[column.propertyKey] = (this as any)[column.propertyKey];
     }
     return json;
   }
 
-  async save(adapter: any): Promise<void> {
+  async save(adapter: DatabaseAdapter): Promise<void> {
     this.validate();
-    // Save logic (insert or update)
-    const eventType = this.isNew() ? "CREATE" : "UPDATE";
-    const eventPayload = this.toJSON();
-    BaseModel.realTimeSync.getEventEmitter().emit({
-      type: eventType,
-      payload: eventPayload,
+    const txManager = new TransactionManager(adapter);
+    const isNewRecord = this._isNew; // Store initial state before transaction
+
+    await txManager.executeInTransaction(async () => {
+      if (this._isNew) {
+        await this.insert(adapter);
+        this._isNew = false;
+      } else if (this._isDirty) {
+        await this.update(adapter);
+      }
+      this._isDirty = false;
+      this._originalValues = {};
     });
+
+    if (BaseModel.realTimeSync) {
+      const eventType: ModelEventType = isNewRecord ? "CREATE" : "UPDATE";
+      BaseModel.realTimeSync.emit({
+        type: eventType,
+        model: this.constructor.name,
+        payload: this,
+      });
+    }
   }
 
-  async delete(adapter: any): Promise<void> {
-    // Delete logic
-    const eventPayload = this.toJSON();
-    BaseModel.realTimeSync.getEventEmitter().emit({
-      type: "DELETE",
-      payload: eventPayload,
+  private async insert(adapter: DatabaseAdapter): Promise<void> {
+    const metadata = ModelRegistry.getModelMetadata(
+      this.constructor as { new (...args: any[]): BaseModel },
+    );
+    const columns = metadata.columns.filter((col) => !col.options.primaryKey);
+    const values = columns.map((col) => (this as any)[col.propertyKey]);
+
+    // Get column mappings if they exist for this model
+    const modelClass = this.constructor as any;
+    const columnMappings = modelClass.columnMappings || {};
+
+    // Map property keys to database column names if there's a mapping
+    const dbColumns = columns.map((col) =>
+      columnMappings[col.propertyKey] || col.propertyKey
+    );
+
+    const placeholders = dbColumns.map((_, i) => `$${i + 1}`).join(", ");
+
+    const query = `
+      INSERT INTO ${metadata.tableName} (${dbColumns.join(", ")})
+      VALUES (${placeholders})
+      RETURNING ${metadata.primaryKey}
+    `;
+
+    const result = await adapter.execute(query, values);
+    if (result.rows.length > 0) {
+      (this as any)[metadata.primaryKey] = result.rows[0][metadata.primaryKey];
+    }
+  }
+
+  private async update(adapter: DatabaseAdapter): Promise<void> {
+    const metadata = ModelRegistry.getModelMetadata(
+      this.constructor as { new (...args: any[]): BaseModel },
+    );
+    const columns = metadata.columns.filter((col) => !col.options.primaryKey);
+    const setClause = columns
+      .map((col, i) => `${col.propertyKey} = $${i + 1}`)
+      .join(", ");
+    const values = columns.map((col) => (this as any)[col.propertyKey]);
+
+    values.push((this as any)[metadata.primaryKey]);
+    const query = `
+      UPDATE ${metadata.tableName}
+      SET ${setClause}
+      WHERE ${metadata.primaryKey} = $${columns.length + 1}
+    `;
+
+    await adapter.execute(query, values);
+  }
+
+  async delete(adapter: DatabaseAdapter): Promise<void> {
+    if (!("id" in this)) {
+      throw new Error("Cannot delete a model without an ID");
+    }
+
+    const txManager = new TransactionManager(adapter);
+    await txManager.executeInTransaction(async () => {
+      await adapter.execute(
+        `DELETE FROM ${this.constructor.name.toLowerCase()}s WHERE id = $1`,
+        [(this as any).id],
+      );
     });
+
+    if (BaseModel.realTimeSync) {
+      BaseModel.realTimeSync.emit({
+        type: "DELETE",
+        model: this.constructor.name,
+        payload: this,
+      });
+    }
   }
 }

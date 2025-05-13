@@ -1,4 +1,3 @@
-
 import { Validate } from "./Validate.ts";
 
 type ValidationFunction = (value: any) => boolean | string;

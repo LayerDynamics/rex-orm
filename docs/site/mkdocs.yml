@@ -1,0 +1,37 @@
+
+site_name: Rex-ORM Documentation
+site_description: Documentation for Rex-ORM, a type-safe ORM for Deno
+site_author: Rex-ORM Team
+repo_url: https://github.com/LayerDynamics/rex-orm
+edit_uri: edit/main/docs/
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: quick-start.md
+  - Guides:
+    - Models: guides/models.md
+    - Relationships: guides/relationships.md
+    - Querying: guides/querying.md
+    - Migrations: guides/migrations.md
+  - API Reference: api/index.md
+  - Development:
+    - Contributing: development/contributing.md
+    - Roadmap: development/roadmap.md
+  - Deployment:
+    - Serverless: serverless-deployment.md
+    - Vector Support: vector-support.md

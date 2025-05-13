@@ -1,4 +1,7 @@
-import { assertEquals, assertStringIncludes } from "https://deno.land/std/testing/asserts.ts";
+import {
+  assertEquals,
+  assertStringIncludes,
+} from "https://deno.land/std/testing/asserts.ts";
 import { parse } from "https://deno.land/std/yaml/mod.ts";
 import { join } from "https://deno.land/std/path/mod.ts";
 
@@ -18,11 +21,11 @@ Deno.test({
 
     await t.step("validate function configurations", () => {
       const { functions } = config;
-      
+
       // GraphQL function
       assertStringIncludes(functions.graphql.handler, "graphqlHandler");
       assertEquals(functions.graphql.events.length, 2);
-      
+
       // Realtime function
       assertStringIncludes(functions.realtime.handler, "realtimeHandler");
       assertEquals(functions.realtime.events.length, 3);
@@ -37,7 +40,10 @@ Deno.test({
     });
 
     await t.step("validate plugins", () => {
-      assertEquals(config.plugins.includes("serverless-plugin-custom-runtime"), true);
+      assertEquals(
+        config.plugins.includes("serverless-plugin-custom-runtime"),
+        true,
+      );
     });
   },
 });

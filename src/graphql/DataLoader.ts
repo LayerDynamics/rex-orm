@@ -6,7 +6,7 @@ export class BatchLoader<K, V> {
 
   constructor(
     batchFn: (keys: readonly K[]) => Promise<V[]>,
-    options: { cacheSize?: number; batchDelay?: number } = {}
+    options: { cacheSize?: number; batchDelay?: number } = {},
   ) {
     this.batchFn = batchFn;
     this.cache = new Map();
@@ -21,7 +21,7 @@ export class BatchLoader<K, V> {
 
     const promise = new Promise<V>((resolve, reject) => {
       this.queue.push(key);
-      
+
       if (this.timeout === null) {
         this.timeout = setTimeout(() => this.flush(), 0);
       }
@@ -45,7 +45,7 @@ export class BatchLoader<K, V> {
         }
       });
     } catch (error) {
-      keys.forEach(key => {
+      keys.forEach((key) => {
         const promise = this.cache.get(key);
         if (promise) {
           (promise as any).reject(error);

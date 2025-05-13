@@ -1,3 +1,4 @@
+// src/migrations/002_create_posts_table.ts
 import { DatabaseAdapter } from "../interfaces/DatabaseAdapter.ts";
 import { Migration } from "../migration/MigrationRunner.ts";
 

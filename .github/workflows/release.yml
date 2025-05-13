@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version type to bump (patch, minor, major)"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      publish:
+        description: "Publish module after release"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Run Tests
+        run: |
+          deno test --allow-read --allow-write --allow-env --allow-net --unstable-kv
+
+      - name: Update Version
+        run: |
+          deno run --allow-read --allow-write --allow-env scripts/bump_version.ts ${{ github.event.inputs.version_type }}
+
+          # Get the new version
+          NEW_VERSION=$(deno eval "import { VERSION } from './src/version.ts'; console.log(VERSION);")
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+
+      - name: Commit Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "chore: bump version to ${{ env.NEW_VERSION }}"
+          git tag -a "v${{ env.NEW_VERSION }}" -m "Release v${{ env.NEW_VERSION }}"
+          git push
+          git push --tags
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get the last two tags
+          PREVIOUS_TAG=$(git tag --sort=-v:refname | sed -n 2p)
+          CURRENT_TAG="v${{ env.NEW_VERSION }}"
+
+          # If no previous tag exists, use the first commit
+          if [ -z "$PREVIOUS_TAG" ]; then
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          # Generate changelog
+          echo "## Changes in v${{ env.NEW_VERSION }}" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          git log ${PREVIOUS_TAG}..${CURRENT_TAG} --pretty=format:"* %s (%an)" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+          # Set changelog for release description
+          CHANGELOG=$(cat CHANGELOG.md)
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.NEW_VERSION }}
+          name: Release v${{ env.NEW_VERSION }}
+          body: ${{ env.CHANGELOG }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to JSR
+        if: ${{ github.event.inputs.publish == 'true' }}
+        env:
+          JSR_TOKEN: ${{ secrets.JSR_TOKEN }}
+        run: |
+          echo "Publishing to JSR..."
+          deno publish --allow-all
+
+      - name: Trigger Deno Land Module Update
+        if: ${{ github.event.inputs.publish == 'true' }}
+        run: |
+          echo "GitHub webhooks will automatically notify deno.land about the new tag"
+          echo "No additional action required - deno.land/x will detect the new tag via the configured GitHub webhook"

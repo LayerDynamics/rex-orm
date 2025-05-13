@@ -17,17 +17,25 @@ export class SubscriptionManager {
     this.eventEmitter = emitter;
   }
 
-  subscribe(clientId: string, eventTypes: string[], filters?: (event: Event) => boolean) {
+  subscribe(
+    clientId: string,
+    eventTypes: string[],
+    filters?: (event: Event) => boolean,
+  ) {
     this.subscriptions.push({ clientId, eventTypes, filters });
   }
 
   unsubscribe(clientId: string) {
-    this.subscriptions = this.subscriptions.filter(sub => sub.clientId !== clientId);
+    this.subscriptions = this.subscriptions.filter((sub) =>
+      sub.clientId !== clientId
+    );
   }
 
   getRelevantEvents(clientId: string, event: Event): boolean {
-    const clientSubs = this.subscriptions.filter(sub => sub.clientId === clientId);
-    return clientSubs.some(sub => 
+    const clientSubs = this.subscriptions.filter((sub) =>
+      sub.clientId === clientId
+    );
+    return clientSubs.some((sub) =>
       sub.eventTypes.includes(event.type) &&
       (sub.filters ? sub.filters(event) : true)
     );

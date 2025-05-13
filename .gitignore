@@ -2,3 +2,12 @@
 docs/dev-docs/no-gh
 
 .history
+
+.trunk
+test_rollback_db.sqlite
+test_migrate_db.sqlite
+test_seed_db.sqlite
+test_runner.ts
+main_test.ts
+.deno_lsp
+.vscode

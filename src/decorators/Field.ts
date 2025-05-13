@@ -12,11 +12,11 @@ export interface FieldOptions {
 export function Field(options: FieldOptions): PropertyDecorator {
   return (target: Object, propertyKey: string | symbol) => {
     const fields = getMetadata("graphql:fields", target.constructor) || [];
-    
+
     fields.push({
       propertyKey,
       ...options,
-      name: propertyKey.toString()
+      name: propertyKey.toString(),
     });
 
     defineMetadata("graphql:fields", fields, target.constructor);

@@ -14,12 +14,25 @@ Deno.test("SubscriptionManager handles subscriptions correctly", () => {
   manager.subscribe(clientId1, ["CREATE", "UPDATE"]);
 
   // Client 2 subscribes to DELETE events with a filter
-  manager.subscribe(clientId2, ["DELETE"], (event: Event) => event.payload.id === 2);
+  manager.subscribe(
+    clientId2,
+    ["DELETE"],
+    (event: Event) => event.payload.id === 2,
+  );
 
   const event1: Event = { type: "CREATE", payload: { id: 1, name: "Test" } };
-  const event2: Event = { type: "DELETE", payload: { id: 2, name: "Deleted Item" } };
-  const event3: Event = { type: "DELETE", payload: { id: 3, name: "Another Item" } };
-  const event4: Event = { type: "UPDATE", payload: { id: 1, name: "Updated Test" } };
+  const event2: Event = {
+    type: "DELETE",
+    payload: { id: 2, name: "Deleted Item" },
+  };
+  const event3: Event = {
+    type: "DELETE",
+    payload: { id: 3, name: "Another Item" },
+  };
+  const event4: Event = {
+    type: "UPDATE",
+    payload: { id: 1, name: "Updated Test" },
+  };
 
   // Client 1 should receive event1 and event4
   assertEquals(manager.getRelevantEvents(clientId1, event1), true);

@@ -1,3 +1,4 @@
+// src/migrations/001_create_user_table.ts
 import { DatabaseAdapter } from "../interfaces/DatabaseAdapter.ts";
 import { Migration } from "../migration/MigrationRunner.ts";
 

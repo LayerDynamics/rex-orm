@@ -29,14 +29,14 @@ async function initialize() {
     databasePath: Deno.env.get("DATABASE_URL") || "./data/rex_orm_db.sqlite",
   };
 
-  const adapter = DatabaseFactory.createAdapter(config);
+  const adapter = await DatabaseFactory.createAdapter(config);
   await adapter.connect();
 
   // Use mock RealTimeSync in test mode
-  realTimeSync = isTestMode && mockRealTimeSync ? 
-    mockRealTimeSync : 
-    new RealTimeSyncImpl({
-      port: parseInt(Deno.env.get("REALTIME_PORT") || "8080")
+  realTimeSync = isTestMode && mockRealTimeSync
+    ? mockRealTimeSync
+    : new RealTimeSyncImpl({
+      port: parseInt(Deno.env.get("REALTIME_PORT") || "8080"),
     });
 
   await realTimeSync.start();
@@ -50,85 +50,167 @@ async function initialize() {
   // Initialize GraphQL Schema with resolvers
   schema = new graphqlDeno.GraphQLSchema({
     query: new graphqlDeno.GraphQLObjectType({
-      name: 'Query',
-      fields: () => ({
-        ...schemaConfig.queries,
-        resolvers: resolvers.Query
-      })
+      name: "Query",
+      fields: () => {
+        // Convert schemaConfig.queries into proper field configurations
+        const queryFields: graphqlDeno.GraphQLFieldConfigMap<any, any> = {};
+
+        // Add all schema query fields
+        Object.entries(schemaConfig.queries).forEach(
+          ([fieldName, fieldConfig]) => {
+            // Transform the field config to be compatible with graphql_deno
+            queryFields[fieldName] = {
+              type: fieldConfig.type,
+              description: fieldConfig.description,
+              args: fieldConfig.args
+                ? Object.fromEntries(
+                  Object.entries(fieldConfig.args).map((
+                    [argName, argConfig],
+                  ) => [
+                    argName,
+                    {
+                      type: argConfig.type,
+                      defaultValue: argConfig.defaultValue,
+                      description: argConfig.description,
+                    },
+                  ]),
+                )
+                : undefined,
+              resolve: fieldConfig.resolve,
+              subscribe: fieldConfig.subscribe,
+              deprecationReason: fieldConfig.deprecationReason,
+            };
+          },
+        );
+
+        // Add resolver functions to query fields
+        Object.entries(resolvers.Query || {}).forEach(
+          ([fieldName, resolver]) => {
+            if (queryFields[fieldName]) {
+              queryFields[fieldName].resolve = resolver;
+            }
+          },
+        );
+
+        return queryFields;
+      },
     }),
     mutation: new graphqlDeno.GraphQLObjectType({
-      name: 'Mutation',
-      fields: () => ({
-        ...schemaConfig.mutations,
-        resolvers: resolvers.Mutation
-      })
-    })
+      name: "Mutation",
+      fields: () => {
+        // Convert schemaConfig.mutations into proper field configurations
+        const mutationFields: graphqlDeno.GraphQLFieldConfigMap<any, any> = {};
+
+        // Add all schema mutation fields with proper type conversion
+        Object.entries(schemaConfig.mutations).forEach(
+          ([fieldName, fieldConfig]) => {
+            mutationFields[fieldName] = {
+              type: fieldConfig.type,
+              description: fieldConfig.description,
+              args: fieldConfig.args
+                ? Object.fromEntries(
+                  Object.entries(fieldConfig.args).map((
+                    [argName, argConfig],
+                  ) => [
+                    argName,
+                    {
+                      type: argConfig.type,
+                      defaultValue: argConfig.defaultValue,
+                      description: argConfig.description,
+                    },
+                  ]),
+                )
+                : undefined,
+              resolve: fieldConfig.resolve,
+              subscribe: fieldConfig.subscribe,
+              deprecationReason: fieldConfig.deprecationReason,
+            };
+          },
+        );
+
+        // Add resolver functions to their respective fields
+        Object.entries(resolvers.Mutation || {}).forEach(
+          ([fieldName, resolver]) => {
+            if (mutationFields[fieldName]) {
+              mutationFields[fieldName].resolve = resolver;
+            }
+          },
+        );
+
+        return mutationFields;
+      },
+    }),
   });
 }
 
+// GraphQL handler implementation
 export const graphqlHandler = async (event: any, context: any) => {
   await initialize();
-  
+
+  // Handle CORS preflight requests
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST,GET,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
+        "Access-Control-Max-Age": "86400",
       },
       body: "",
     };
   }
 
   try {
-    const { query, variables, operationName } = JSON.parse(event.body);
+    const { query, variables, operationName } = JSON.parse(event.body || "{}");
     const result = await graphqlDeno.graphql({
       schema,
       source: query,
       variableValues: variables,
       operationName,
-      contextValue: { 
+      contextValue: {
         adapter: DatabaseFactory.getAdapter(),
-        models: ModelRegistry.getRegisteredModels()
-      }
+        models: ModelRegistry.getRegisteredModels(),
+      },
     });
 
-    // Ensure we always return an object with data
-    const responseBody = {
-      data: result.data || {},
-      errors: result.errors
-    };
+    const responseBody = result.errors
+      ? { errors: result.errors }
+      : { data: result.data };
 
     return {
       statusCode: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(responseBody)
+      body: JSON.stringify(responseBody),
     };
   } catch (error) {
     return {
       statusCode: 500,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        errors: [{ message: error instanceof Error ? error.message : "Internal server error" }]
-      })
+        errors: [{
+          message: error instanceof Error
+            ? error.message
+            : "Internal server error",
+        }],
+      }),
     };
   }
 };
 
 export const realtimeHandler = async (event: any, context: any) => {
   await initialize();
-  
+
   if (!event.requestContext) {
     return {
       statusCode: 400,
-      body: "Invalid event format"
+      body: "Invalid event format",
     };
   }
 
@@ -140,42 +222,40 @@ export const realtimeHandler = async (event: any, context: any) => {
         await realTimeSync.connect(connectionId);
         return {
           statusCode: 200,
-          body: "Connected"
+          body: "Connected",
         };
 
       case "MESSAGE":
         if (!event.body) {
           return {
             statusCode: 400,
-            body: "Message body required"
+            body: "Message body required",
           };
         }
         const message = JSON.parse(event.body);
         await realTimeSync.message(connectionId, message);
         return {
           statusCode: 200,
-          body: "Message processed"
+          body: "Message processed",
         };
 
       case "DISCONNECT":
         await realTimeSync.disconnect(connectionId);
         return {
           statusCode: 200,
-          body: "Disconnected"
+          body: "Disconnected",
         };
 
       default:
         return {
           statusCode: 400,
-          body: "Invalid event type"
+          body: "Invalid event type",
         };
     }
   } catch (error) {
     return {
       statusCode: 500,
-      body: error instanceof Error ? error.message : "Internal server error"
+      body: error instanceof Error ? error.message : "Internal server error",
     };
   }
 };
-
-

@@ -5,7 +5,7 @@ import { WebSocketServer } from "../../../realtime/WebSocketServer.ts";
 import { EventEmitter } from "../../../realtime/EventEmitter.ts";
 import { SubscriptionManager } from "../../../realtime/SubscriptionManager.ts";
 import { Event } from "../../../realtime/types.ts";
-import { WebSocket, RawData } from "npm:ws@8.18.0";
+import { RawData, WebSocket } from "npm:ws@8.18.0";
 import { delay } from "https://deno.land/std@0.203.0/async/delay.ts";
 
 Deno.test({
@@ -14,24 +14,34 @@ Deno.test({
     const port = 8081;
     const eventEmitter = new EventEmitter();
     const subscriptionManager = new SubscriptionManager();
-    const websocketServer = new WebSocketServer(port, eventEmitter, subscriptionManager);
+    const websocketServer = new WebSocketServer(
+      port,
+      eventEmitter,
+      subscriptionManager,
+    );
 
     try {
       await websocketServer.start();
+
+      // Add delay to ensure the server is fully initialized before clients connect
+      await delay(500);
 
       // Setup clients with event tracking
       const setupClient = async (eventTypes: string[]) => {
         const ws = new WebSocket(`ws://localhost:${port}`);
         const events: Event[] = [];
-        
+
         // Wait for connection
-        await new Promise<void>(resolve => ws.once('open', () => resolve()));
+        await new Promise<void>((resolve) => ws.once("open", () => resolve()));
 
         // Handle messages
-        ws.on('message', (data: RawData) => {
+        ws.on("message", (data: RawData) => {
           const event = JSON.parse(data.toString());
           // Only track non-connection related events
-          if (!['connection', 'subscription_success', 'unsubscription_success'].includes(event.type)) {
+          if (
+            !["connection", "subscription_success", "unsubscription_success"]
+              .includes(event.type)
+          ) {
             events.push(event);
           }
         });
@@ -50,8 +60,14 @@ Deno.test({
       await delay(200);
 
       // Create test events
-      const createEvent: Event = { type: "CREATE", payload: { id: 1, name: "Test User" } };
-      const updateEvent: Event = { type: "UPDATE", payload: { id: 1, name: "Updated User" } };
+      const createEvent: Event = {
+        type: "CREATE",
+        payload: { id: 1, name: "Test User" },
+      };
+      const updateEvent: Event = {
+        type: "UPDATE",
+        payload: { id: 1, name: "Updated User" },
+      };
 
       // Emit events
       eventEmitter.emit(createEvent);
@@ -61,15 +77,30 @@ Deno.test({
       await delay(200);
 
       // Assert results
-      assertEquals(client1.events.length, 1, "Client 1 should receive exactly one CREATE event");
-      assertEquals(client1.events[0], createEvent, "Client 1 event should match CREATE event");
-      assertEquals(client2.events.length, 1, "Client 2 should receive exactly one UPDATE event");
-      assertEquals(client2.events[0], updateEvent, "Client 2 event should match UPDATE event");
+      assertEquals(
+        client1.events.length,
+        1,
+        "Client 1 should receive exactly one CREATE event",
+      );
+      assertEquals(
+        client1.events[0],
+        createEvent,
+        "Client 1 event should match CREATE event",
+      );
+      assertEquals(
+        client2.events.length,
+        1,
+        "Client 2 should receive exactly one UPDATE event",
+      );
+      assertEquals(
+        client2.events[0],
+        updateEvent,
+        "Client 2 event should match UPDATE event",
+      );
 
       // Cleanup clients
       client1.ws.close();
       client2.ws.close();
-
     } finally {
       await websocketServer.shutdown();
     }

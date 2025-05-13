@@ -13,12 +13,18 @@ export function Validate(options: ValidateOptions) {
     if (!getMetadata("validations", target.constructor)) {
       defineMetadata("validations", {}, target.constructor);
     }
-    const validations = getMetadata("validations", target.constructor) as { [key: string]: ValidationFunction[] };
+    const validations = getMetadata("validations", target.constructor) as {
+      [key: string]: ValidationFunction[];
+    };
     if (!validations[propertyKey]) {
       validations[propertyKey] = [];
     }
     validations[propertyKey].push(options.validator);
     defineMetadata("validations", validations, target.constructor);
-    ModelRegistry.registerValidation(target.constructor, propertyKey, options.validator);
+    ModelRegistry.registerValidation(
+      target.constructor,
+      propertyKey,
+      options.validator,
+    );
   };
 }

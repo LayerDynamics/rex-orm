@@ -17,9 +17,3 @@ export interface ModelMetadata {
   columns: ColumnMetadata[];
   relations: RelationMetadata[];
 }
-
-
-
-
-
-

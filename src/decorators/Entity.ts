@@ -1,4 +1,4 @@
-import { defineMetadata, hasMetadata } from "../deps.ts";
+import "reflect-metadata";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 
 export interface EntityOptions {
@@ -6,14 +6,21 @@ export interface EntityOptions {
   tableName?: string;
 }
 
-export function Entity(options: EntityOptions = {}) {
-  return function <T extends { new (...args: any[]): {} }>(target: T) {
-    // Initialize columns array if not exists
-    if (!hasMetadata("columns", target)) {
-      defineMetadata("columns", [], target);
-    }
-    defineMetadata("tableName", options.tableName, target);
-    ModelRegistry.registerModel(target);
-    return target;
+interface EntityMetadata {
+  tableName?: string;
+}
+
+const entityMetadataMap = new Map<Function, EntityMetadata>();
+
+export function Entity(options: EntityMetadata = {}) {
+  return function (target: Function) {
+    entityMetadataMap.set(target, options);
+    Reflect.defineMetadata("tableName", options.tableName, target);
   };
+}
+
+export function getEntityMetadata(
+  target: Function,
+): EntityMetadata | undefined {
+  return entityMetadataMap.get(target);
 }
