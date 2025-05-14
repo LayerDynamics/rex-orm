@@ -1,12 +1,16 @@
 import { ModelRegistry } from "./ModelRegistry.ts";
-import { RealTimeSync } from "../realtime/index.ts";
-import { DatabaseAdapter } from "../interfaces/DatabaseAdapter.ts";
+import { RealTimeSync as _RealTimeSync } from "../realtime/index.ts";
+import {
+  DatabaseAdapter,
+  DatabaseRecord as _DatabaseRecord,
+  QueryParam,
+} from "../interfaces/DatabaseAdapter.ts";
 import { TransactionManager } from "../transactions/TransactionManager.ts";
-import { ModelEventType } from "./types.ts";
+import { ModelEvent, ModelEventType } from "./types.ts";
 
-// Fix naming conflict by renaming the local interface
+// Properly define the interface for real-time sync
 interface ModelRealTimeSync {
-  emit(data: any): void;
+  emit(data: ModelEvent): void;
   // ...other methods...
 }
 
@@ -15,26 +19,32 @@ export abstract class BaseModel {
   protected static realTimeSync: ModelRealTimeSync | null = null;
   protected _isNew = true;
   protected _isDirty = false;
-  protected _originalValues: Record<string, any> = {};
+  protected _originalValues: Record<string, unknown> = {};
   abstract id: number; // Change to abstract property
 
   constructor() {
     ModelRegistry.registerModel(
-      this.constructor as { new (...args: any[]): BaseModel },
+      this.constructor as { new (...args: unknown[]): BaseModel },
     );
     this.trackChanges();
   }
 
+  // Type that allows string indexing
+  [key: string]: unknown;
+
   private trackChanges() {
-    const handler = {
-      set: (target: any, prop: string, value: any) => {
-        if (target[prop] !== value) {
-          if (!this._originalValues.hasOwnProperty(prop)) {
-            this._originalValues[prop] = target[prop];
+    const handler: ProxyHandler<BaseModel> = {
+      set: (target: BaseModel, prop: string | symbol, value: unknown) => {
+        if (target[prop as string] !== value) {
+          // Use Object.prototype.hasOwnProperty to fix no-prototype-builtins
+          if (
+            !Object.prototype.hasOwnProperty.call(this._originalValues, prop)
+          ) {
+            this._originalValues[prop as string] = target[prop as string];
           }
           this._isDirty = true;
         }
-        target[prop] = value;
+        target[prop as string] = value;
         return true;
       },
     };
@@ -53,11 +63,11 @@ export abstract class BaseModel {
 
   validate(): void {
     const metadata = ModelRegistry.getModelMetadata(
-      this.constructor as { new (...args: any[]): BaseModel },
+      this.constructor as { new (...args: unknown[]): BaseModel },
     );
     const validations = metadata.validations;
     for (const [property, validators] of Object.entries(validations)) {
-      const value = (this as any)[property];
+      const value = (this as Record<string, unknown>)[property];
       for (const validator of validators) {
         const result = validator(value);
         if (result === false) {
@@ -75,13 +85,14 @@ export abstract class BaseModel {
     return !this.id;
   }
 
-  toJSON(): Record<string, any> {
-    const json: Record<string, any> = {};
+  toJSON(): Record<string, unknown> {
+    const json: Record<string, unknown> = {};
     const metadata = ModelRegistry.getModelMetadata(
-      this.constructor as { new (...args: any[]): BaseModel },
+      this.constructor as { new (...args: unknown[]): BaseModel },
     );
     for (const column of metadata.columns) {
-      json[column.propertyKey] = (this as any)[column.propertyKey];
+      json[column.propertyKey] =
+        (this as Record<string, unknown>)[column.propertyKey];
     }
     return json;
   }
@@ -114,13 +125,17 @@ export abstract class BaseModel {
 
   private async insert(adapter: DatabaseAdapter): Promise<void> {
     const metadata = ModelRegistry.getModelMetadata(
-      this.constructor as { new (...args: any[]): BaseModel },
+      this.constructor as { new (...args: unknown[]): BaseModel },
     );
     const columns = metadata.columns.filter((col) => !col.options.primaryKey);
-    const values = columns.map((col) => (this as any)[col.propertyKey]);
+    const values = columns.map((col) =>
+      (this as BaseModel)[col.propertyKey]
+    ) as QueryParam[];
 
     // Get column mappings if they exist for this model
-    const modelClass = this.constructor as any;
+    const modelClass = this.constructor as unknown as {
+      columnMappings?: Record<string, string>;
+    };
     const columnMappings = modelClass.columnMappings || {};
 
     // Map property keys to database column names if there's a mapping
@@ -138,21 +153,24 @@ export abstract class BaseModel {
 
     const result = await adapter.execute(query, values);
     if (result.rows.length > 0) {
-      (this as any)[metadata.primaryKey] = result.rows[0][metadata.primaryKey];
+      (this as Record<string, unknown>)[metadata.primaryKey] =
+        result.rows[0][metadata.primaryKey];
     }
   }
 
   private async update(adapter: DatabaseAdapter): Promise<void> {
     const metadata = ModelRegistry.getModelMetadata(
-      this.constructor as { new (...args: any[]): BaseModel },
+      this.constructor as { new (...args: unknown[]): BaseModel },
     );
     const columns = metadata.columns.filter((col) => !col.options.primaryKey);
     const setClause = columns
       .map((col, i) => `${col.propertyKey} = $${i + 1}`)
       .join(", ");
-    const values = columns.map((col) => (this as any)[col.propertyKey]);
+    const values = columns.map((col) =>
+      (this as BaseModel)[col.propertyKey]
+    ) as QueryParam[];
 
-    values.push((this as any)[metadata.primaryKey]);
+    values.push((this as BaseModel)[metadata.primaryKey] as QueryParam);
     const query = `
       UPDATE ${metadata.tableName}
       SET ${setClause}
@@ -171,7 +189,7 @@ export abstract class BaseModel {
     await txManager.executeInTransaction(async () => {
       await adapter.execute(
         `DELETE FROM ${this.constructor.name.toLowerCase()}s WHERE id = $1`,
-        [(this as any).id],
+        [(this as BaseModel).id as QueryParam],
       );
     });
 

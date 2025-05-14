@@ -3,7 +3,6 @@ import { GraphQLSchemaGenerator } from "../../../graphql/GraphQLSchema.ts";
 import { ModelRegistry } from "../../../models/ModelRegistry.ts";
 import { Column, Entity as Model } from "../../../decorators/index.ts";
 import * as graphql from "https://deno.land/x/graphql_deno@v15.0.0/mod.ts";
-import { GraphQLType } from "../../../graphql/types.ts";
 import "reflect-metadata";
 import { Entity } from "../../../decorators/Entity.ts";
 import { PrimaryKey } from "../../../decorators/PrimaryKey.ts";
@@ -26,7 +25,7 @@ ModelRegistry.registerModel(GraphQLUser);
 
 Deno.test({
   name: "GraphQLSchemaGenerator generates correct schema config",
-  async fn(t) {
+  fn() {
     ModelRegistry.clear();
 
     @Model({ tableName: "test_users" })

@@ -2,7 +2,6 @@ import "reflect-metadata";
 import { assertEquals } from "../../../deps.ts";
 import {
   execute as executeSeed,
-  seedCommand,
 } from "../../../cli/commands/seed.ts";
 import { execute as executeMigrate } from "../../../cli/commands/migrate.ts";
 import { ConnectionManager } from "../../../db/ConnectionManager.ts";
@@ -11,16 +10,28 @@ import { MockDatabaseAdapter } from "../../mocks/MockDatabaseAdapter.ts";
 import * as fs from "https://deno.land/std@0.203.0/fs/mod.ts";
 import * as path from "https://deno.land/std@0.203.0/path/mod.ts";
 
+// Define some types for our test
+interface TableRow {
+  [key: string]: unknown;
+}
+
+interface QueryResult {
+  rows: TableRow[];
+  rowCount: number;
+  lastInsertId?: number;
+  affectedRows?: number;
+}
+
 // Enhanced mock adapter for seed tests
 class SeedTestAdapter extends MockDatabaseAdapter {
-  protected tables: Record<string, any[]> = {
+  protected tables: Record<string, TableRow[]> = {
     "users": [],
     "posts": [],
   };
 
   tableExists = true;
 
-  override execute(query: string, params: any[] = []): Promise<any> {
+  override execute(query: string, params: unknown[] = []): Promise<QueryResult> {
     // Handle table existence check
     if (query.includes("sqlite_master") || query.includes("SELECT 1 FROM")) {
       return Promise.resolve({
@@ -64,7 +75,7 @@ class SeedTestAdapter extends MockDatabaseAdapter {
   }
 
   // Override executeMany to maintain the same behavior
-  override executeMany(query: string, paramSets: any[][]): Promise<any> {
+  override executeMany(query: string, paramSets: QueryParam[][]): Promise<QueryResult> {
     let totalRowCount = 0;
 
     // Execute each query individually
@@ -93,12 +104,12 @@ class SeedTestAdapter extends MockDatabaseAdapter {
   }
 
   // Override getTableData to return our mock data
-  getTableData(tableName: string): any[] {
+  getTableData(tableName: string): TableRow[] {
     return this.tables[tableName] || [];
   }
 
   // Add a method to set table data
-  setTableData(tableData: Record<string, any[]>): void {
+  setTableData(tableData: Record<string, TableRow[]>): void {
     Object.assign(this.tables, tableData);
   }
 }

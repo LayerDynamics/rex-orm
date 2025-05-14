@@ -9,7 +9,7 @@ Deno.test("TransactionManager commits transactions correctly", async () => {
   const adapter = new MockDatabaseAdapter();
   const txManager = new TransactionManager(adapter);
 
-  await txManager.executeInTransaction(async (tx) => {
+  await txManager.executeInTransaction(async (_tx) => {
     await adapter.execute("INSERT INTO users (name) VALUES ($1);", ["Alice"]);
     await adapter.execute("INSERT INTO posts (title) VALUES ($1);", [
       "First Post",
@@ -30,7 +30,7 @@ Deno.test("TransactionManager rolls back transactions on error", async () => {
 
   await assertRejects(
     async () => {
-      await manager.executeInTransaction(async () => {
+      await manager.executeInTransaction(() => {
         throw new Error("Test error");
       });
     },

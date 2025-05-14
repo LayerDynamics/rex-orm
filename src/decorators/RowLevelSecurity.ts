@@ -3,17 +3,24 @@
 import "reflect-metadata";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 import { BaseModel } from "../models/BaseModel.ts";
-import { getErrorMessage } from "../utils/error_utils.ts";
 import { defineMetadata, getMetadata } from "../deps.ts";
+import { DatabaseAdapter, QueryResult } from "../interfaces/DatabaseAdapter.ts";
 
 // Define the Constructor type needed for ModelRegistry
 type Constructor<T = unknown> = { new (...args: unknown[]): T };
+
+// Define a type for the QueryBuilder
+interface QueryBuilder {
+  execute: (adapter: DatabaseAdapter) => Promise<QueryResult>;
+  rawSql: (sql: string) => void;
+  [key: string]: unknown;
+}
 
 /**
  * 6. ROW-LEVEL SECURITY IMPLEMENTATION
  * Enforces access control at the row level
  */
-export function RowLevelSecurity(policyFn: (user: any) => string) {
+export function RowLevelSecurity(policyFn: (user: unknown) => string) {
   return function (constructor: typeof BaseModel) {
     defineMetadata("rowLevelSecurity", {
       enabled: true,
@@ -21,18 +28,18 @@ export function RowLevelSecurity(policyFn: (user: any) => string) {
     }, constructor);
 
     // Check if createQueryBuilder exists on the constructor
-    if (typeof (constructor as any).createQueryBuilder === "function") {
+    if (typeof (constructor as unknown as { createQueryBuilder?: () => unknown }).createQueryBuilder === "function") {
       // Override query builder to add security predicates
       const originalCreateQueryBuilder =
-        (constructor as any).createQueryBuilder;
-      (constructor as any).createQueryBuilder = function (): any {
+        (constructor as unknown as { createQueryBuilder: () => QueryBuilder }).createQueryBuilder;
+      (constructor as unknown as { createQueryBuilder: () => QueryBuilder }).createQueryBuilder = function (): QueryBuilder {
         const qb = originalCreateQueryBuilder.call(this);
 
         // Store the original execute method
         const originalExecute = qb.execute;
 
         // Override execute to add security predicates
-        qb.execute = async function (adapter: any): Promise<any> {
+        qb.execute = function (adapter: DatabaseAdapter): Promise<QueryResult> {
           // Get the current user from the context
           const currentUser = adapter.context?.user;
 

@@ -1,6 +1,6 @@
 import { assertEquals, assertThrows } from "../../../deps.ts";
 import { QueryBuilder } from "../../../query/QueryBuilder.ts";
-import { DatabaseAdapter } from "../../../interfaces/DatabaseAdapter.ts";
+import { DatabaseAdapter as _DatabaseAdapter } from "../../../interfaces/DatabaseAdapter.ts";
 import { MockDatabaseAdapter } from "../../mocks/MockDatabaseAdapter.ts";
 
 Deno.test("QueryBuilder constructs and executes SELECT queries", async () => {
@@ -731,7 +731,7 @@ Deno.test("QueryBuilder constructs DELETE with RETURNING", async () => {
 
 // Testing error handling
 Deno.test("QueryBuilder throws error when table is not specified", () => {
-  const adapter = new MockDatabaseAdapter();
+  const _adapter = new MockDatabaseAdapter();
   const qb = new QueryBuilder();
 
   // Only set the type but not the table

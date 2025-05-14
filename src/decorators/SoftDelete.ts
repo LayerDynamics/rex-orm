@@ -4,10 +4,29 @@ import "reflect-metadata";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 import { BaseModel } from "../models/BaseModel.ts";
 import { getErrorMessage } from "../utils/error_utils.ts";
-import { defineMetadata, getMetadata } from "../deps.ts";
+import { defineMetadata } from "../deps.ts";
+import { DatabaseAdapter } from "../interfaces/DatabaseAdapter.ts";
 
 // Define the Constructor type needed for ModelRegistry
 type Constructor<T = unknown> = { new (...args: unknown[]): T };
+
+// Define interfaces for type safety instead of using Function
+interface QueryBuilder {
+  update: (tableName: string, data: Record<string, unknown>) => QueryBuilder;
+  where: (column: string, operator: string, value: unknown) => QueryBuilder;
+  andWhere: (column: string, operator: string, value: unknown) => QueryBuilder;
+  select: (columns: string) => QueryBuilder;
+  from: (tableName: string) => QueryBuilder;
+  execute: (adapter: DatabaseAdapter) => Promise<{ rows: unknown[]; rowCount: number }>;
+}
+
+interface ModelWithQueryBuilder {
+  createQueryBuilder: () => QueryBuilder;
+}
+
+interface ModelWithFindById {
+  findById: (id: string | number, adapter: DatabaseAdapter, includeSoftDeleted?: boolean) => Promise<BaseModel | null>;
+}
 
 /**
  * 1. SOFT DELETE IMPLEMENTATION
@@ -26,15 +45,14 @@ export function SoftDelete(
       deletedByField,
     }, constructor);
 
-    // Extend the original delete method from BaseModel
-    const originalDelete = constructor.prototype.delete;
+    // Override the delete method from BaseModel
     constructor.prototype.delete = async function (
-      adapter: any,
+      adapter: DatabaseAdapter,
       userId?: string,
     ): Promise<void> {
       // Instead of deleting, just update the deleted fields
       try {
-        const updateData: Record<string, any> = {};
+        const updateData: Record<string, unknown> = {};
         updateData[deletedAtField] = new Date();
 
         if (userId && deletedByField) {
@@ -42,8 +60,8 @@ export function SoftDelete(
         }
 
         // Use query builder to update instead of delete
-        if (typeof (constructor as any).createQueryBuilder === "function") {
-          const qb = (constructor as any).createQueryBuilder();
+        if (typeof (constructor as typeof BaseModel & ModelWithQueryBuilder).createQueryBuilder === "function") {
+          const qb = (constructor as typeof BaseModel & ModelWithQueryBuilder).createQueryBuilder();
           await qb.update(
             ModelRegistry.getModelMetadata(
               this.constructor as unknown as Constructor,
@@ -96,20 +114,20 @@ export function SoftDelete(
 
     // Add a restore method
     // Define the type for restore method to avoid TS2339 error
-    type RestoreMethod = (adapter: any) => Promise<void>;
+    type RestoreMethod = (adapter: DatabaseAdapter) => Promise<void>;
 
     // Add restore method to prototype - fix the type assertion
     (constructor.prototype as unknown as Record<string, unknown>)["restore"] =
-      async function restoreMethod(adapter: any): Promise<void> {
+      async function restoreMethod(adapter: DatabaseAdapter): Promise<void> {
         try {
-          const updateData: Record<string, any> = {};
+          const updateData: Record<string, unknown> = {};
           updateData[deletedAtField] = null;
           if (options.deletedByField) {
             updateData[deletedByField] = null;
           }
 
-          if (typeof (constructor as any).createQueryBuilder === "function") {
-            const qb = (constructor as any).createQueryBuilder();
+          if (typeof (constructor as typeof BaseModel & ModelWithQueryBuilder).createQueryBuilder === "function") {
+            const qb = (constructor as typeof BaseModel & ModelWithQueryBuilder).createQueryBuilder();
             await qb.update(
               ModelRegistry.getModelMetadata(
                 this.constructor as unknown as Constructor,
@@ -159,13 +177,13 @@ export function SoftDelete(
       };
 
     // Modify finder methods to exclude soft deleted by default
-    if (typeof (constructor as any).findById === "function") {
-      const originalFindById = (constructor as any).findById;
-      (constructor as any).findById = async function (
-        id: any,
-        adapter: any,
+    if (typeof (constructor as typeof BaseModel & ModelWithFindById).findById === "function") {
+      const originalFindById = (constructor as typeof BaseModel & ModelWithFindById).findById;
+      (constructor as typeof BaseModel & ModelWithFindById).findById = async function (
+        id: string | number,
+        adapter: DatabaseAdapter,
         includeSoftDeleted = false,
-      ): Promise<any> {
+      ): Promise<BaseModel | null> {
         if (includeSoftDeleted) {
           return originalFindById.call(this, id, adapter);
         }
@@ -182,7 +200,7 @@ export function SoftDelete(
             .andWhere(`${deletedAtField}`, "IS NULL")
             .execute(adapter);
 
-          return result.rows[0] ? new (this as any)(result.rows[0]) : null;
+          return result.rows[0] ? new (this as typeof BaseModel)(result.rows[0]) : null;
         } else {
           // Fallback if createQueryBuilder doesn't exist
           const result = await adapter.execute(
@@ -194,7 +212,7 @@ export function SoftDelete(
             [id],
           );
           return result.rows && result.rows[0]
-            ? new (this as any)(result.rows[0])
+            ? new (this as typeof BaseModel)(result.rows[0])
             : null;
         }
       };

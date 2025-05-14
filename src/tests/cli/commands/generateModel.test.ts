@@ -1,6 +1,5 @@
 import "reflect-metadata";
-import { assertEquals, assertExists } from "../../../deps.ts";
-import { generateModelCommand } from "../../../cli/commands/generateModel.ts";
+import { assertEquals } from "../../../deps.ts";
 import { ensureDir, exists } from "https://deno.land/std@0.203.0/fs/mod.ts";
 import { join } from "https://deno.land/std@0.203.0/path/mod.ts";
 

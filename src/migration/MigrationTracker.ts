@@ -32,7 +32,7 @@ export class MigrationTracker {
         await this.adapter.execute(
           `SELECT 1 FROM ${this.migrationsTable} LIMIT 1`,
         );
-      } catch (error) {
+      } catch (_error) {
         // If there's an error, try the sqlite_master approach
         const tableExists = await this.tableExists(this.migrationsTable);
         if (!tableExists) {
@@ -55,7 +55,7 @@ export class MigrationTracker {
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
       const result = await this.adapter.execute(query, [tableName]);
       return result.rows.length > 0;
-    } catch (error) {
+    } catch (_error) {
       // If this fails, try an alternative approach for different databases
       try {
         await this.adapter.execute(`SELECT 1 FROM ${tableName} LIMIT 1`);

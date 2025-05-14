@@ -1,23 +1,23 @@
 import "reflect-metadata";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 
-type Constructor<T = any> = { new (...args: any[]): T };
+type Constructor<T = unknown> = { new (...args: unknown[]): T };
 
 interface ManyToManyOptions {
   target: () => Constructor;
-  inverse: (object: any) => any;
+  inverse: (object: unknown) => unknown;
   joinTable?: string;
 }
 
 export function ManyToMany(options: ManyToManyOptions) {
-  return function (target: any, propertyKey: string) {
+  return function (target: object, propertyKey: string) {
     if (!Reflect.hasMetadata("relations", target.constructor)) {
       Reflect.defineMetadata("relations", [], target.constructor);
     }
     const relations = Reflect.getMetadata(
       "relations",
       target.constructor,
-    ) as any[];
+    ) as unknown[];
     const metadata = {
       type: "ManyToMany",
       target: options.target(),

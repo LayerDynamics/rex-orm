@@ -1,10 +1,8 @@
 import { assertEquals } from "../../../deps.ts";
-import { migrateCommand } from "../../../cli/commands/migrate.ts";
 import { SQLiteTestHelper } from "../../helpers/SQLiteTestHelper.ts";
 import "reflect-metadata";
 import * as fs from "https://deno.land/std@0.203.0/fs/mod.ts";
 import * as path from "https://deno.land/std@0.203.0/path/mod.ts";
-import { execute } from "../../../cli/commands/migrate.ts";
 
 Deno.test({
   name: "migrate command applies pending migrations correctly",

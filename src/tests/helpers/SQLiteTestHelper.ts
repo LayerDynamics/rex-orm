@@ -29,9 +29,10 @@ export class SQLiteTestHelper implements DatabaseAdapter<DatabaseRecord> {
     // Connection is established in constructor
   }
 
-  async disconnect(): Promise<void> {
+  disconnect(): Promise<void> {
     this.db.close();
     this._connected = false;
+    return Promise.resolve();
   }
 
   async beginTransaction(): Promise<void> {
@@ -124,7 +125,7 @@ export class SQLiteTestHelper implements DatabaseAdapter<DatabaseRecord> {
     `);
   }
 
-  async execute(query: string, params: unknown[] = []): Promise<QueryResult> {
+  execute(query: string, params: unknown[] = []): Promise<QueryResult> {
     try {
       this._queryCount++;
 

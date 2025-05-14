@@ -1,4 +1,4 @@
 export interface Event {
   type: string;
-  payload: any;
+  payload: unknown;
 }

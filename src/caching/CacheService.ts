@@ -2,6 +2,16 @@ import { CacheAdapter } from "../interfaces/CacheAdapter.ts";
 import { InMemoryCache } from "./InMemoryCache.ts";
 import { DenoKVCache } from "./DenoKVCache.ts";
 
+interface CacheOptions {
+  ttl?: number;
+  namespace?: string;
+  [key: string]: unknown;
+}
+
+interface DisconnectableCache extends CacheAdapter {
+  disconnect(): void | Promise<void>;
+}
+
 export class CacheService {
   private static instance: CacheService;
   private cache: CacheAdapter | null = null;
@@ -15,7 +25,7 @@ export class CacheService {
     return CacheService.instance;
   }
 
-  initializeCache(type: "in-memory" | "deno-kv", options?: any): void {
+  initializeCache(type: "in-memory" | "deno-kv", options?: CacheOptions): void {
     switch (type) {
       case "in-memory":
         this.cache = new InMemoryCache(options?.ttl);
@@ -40,7 +50,7 @@ export class CacheService {
   disconnectCache(): void | Promise<void> {
     if (!this.cache) return;
     if ("disconnect" in this.cache) {
-      return (this.cache as any).disconnect();
+      return (this.cache as DisconnectableCache).disconnect();
     }
   }
 }

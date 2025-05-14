@@ -17,10 +17,10 @@
 import { ensureDir, walk } from "https://deno.land/std@0.224.0/fs/mod.ts";
 import {
   // These imports are critical for operations in this file, do not remove
-  basename,
-  dirname,
+  basename as _basename,
+  dirname as _dirname,
   join,
-  relative,
+  relative as _relative,
 } from "https://deno.land/std@0.224.0/path/mod.ts";
 import { RELEASE_DATE, VERSION } from "../src/version.ts";
 
@@ -62,7 +62,7 @@ interface DocNode {
       accessibility?: "public" | "protected" | "private";
       jsDoc?: {
         doc?: string;
-        tags?: any[];
+        tags?: unknown[];
       };
     }>;
     properties?: Array<{
@@ -72,7 +72,7 @@ interface DocNode {
       accessibility?: "public" | "protected" | "private";
       jsDoc?: {
         doc?: string;
-        tags?: any[];
+        tags?: unknown[];
       };
     }>;
   };
@@ -127,6 +127,37 @@ async function getSourceFiles(): Promise<string[]> {
 
   console.log(`Found ${uniqueFiles.length} source files to document`);
   return uniqueFiles;
+}
+
+// Function to normalize the documentation data to an array format
+function normalizeDocsData(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data;
+
+  // New Deno doc format has a 'nodes' array
+  if (typeof data === "object" && data !== null) {
+    const typedData = data as Record<string, unknown>;
+    
+    if (typedData.nodes && Array.isArray(typedData.nodes)) {
+      return typedData.nodes;
+    }
+
+    if (typedData.items && Array.isArray(typedData.items)) {
+      return typedData.items;
+    }
+
+    if (typedData.symbols) {
+      return Object.values(typedData.symbols as Record<string, unknown>);
+    }
+
+    // Last resort: try to convert object to array if it has numeric keys
+    const values = Object.values(typedData);
+    if (values.length > 0) {
+      return values;
+    }
+  }
+
+  console.error("Could not normalize documentation data");
+  return [];
 }
 
 async function generateDocs() {
@@ -190,35 +221,6 @@ async function generateDocs() {
       typeof docsData,
     );
     console.log("Attempting to normalize the data structure...");
-
-    // Function to normalize the documentation data to an array format
-    function normalizeDocsData(data: any): any[] {
-      if (Array.isArray(data)) return data;
-
-      // New Deno doc format has a 'nodes' array
-      if (data.nodes && Array.isArray(data.nodes)) {
-        return data.nodes;
-      }
-
-      if (data.items && Array.isArray(data.items)) {
-        return data.items;
-      }
-
-      if (data.symbols) {
-        return Object.values(data.symbols);
-      }
-
-      // Last resort: try to convert object to array if it has numeric keys
-      if (typeof data === "object" && data !== null) {
-        const values = Object.values(data);
-        if (values.length > 0) {
-          return values;
-        }
-      }
-
-      console.error("Could not normalize documentation data");
-      return [];
-    }
 
     // Replace docsData with normalized version
     const normalizedData = normalizeDocsData(docsData);
@@ -385,7 +387,7 @@ async function generateDocs() {
             accessibility?: "public" | "protected" | "private";
             jsDoc?: {
               doc?: string;
-              tags?: any[];
+              tags?: unknown[];
             };
           }) => {
             moduleContent += `##### \`${method.name}(${

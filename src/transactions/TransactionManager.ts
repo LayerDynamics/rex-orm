@@ -1,6 +1,6 @@
 import { DatabaseAdapter } from "../interfaces/DatabaseAdapter.ts";
 import { Transaction, TransactionManagerOptions } from "./types.ts";
-import { v4 } from "https://deno.land/std@0.178.0/uuid/mod.ts";
+import { v4 as _v4 } from "https://deno.land/std@0.178.0/uuid/mod.ts";
 
 export class TransactionManager {
   private adapter: DatabaseAdapter;

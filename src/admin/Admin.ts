@@ -5,8 +5,9 @@ import { DatabaseFactory } from "../factory/DatabaseFactory.ts";
 import { getErrorMessage } from "../utils/error_utils.ts";
 import {
   DatabaseAdapter,
-  DatabaseAdapterContext,
+  DatabaseAdapterContext as _DatabaseAdapterContext,
   EnhancedDatabaseAdapter,
+  QueryResult,
 } from "../interfaces/DatabaseAdapter.ts";
 import {
   Audited,
@@ -35,7 +36,7 @@ function extendModelRegistry(): void {
   // We'll use getFeatures directly instead
 
   // Register built-in enterprise features
-  const enterpriseFeatures = [
+  const _enterpriseFeatures = [
     "softDelete",
     "tenantScoped",
     "audited",
@@ -52,15 +53,25 @@ function extendModelRegistry(): void {
 // Define interfaces for model instance methods
 interface IModelWithQueries {
   createQueryBuilder(): {
-    select: (columns: string[]) => any;
-    delete: (tableName: string) => any;
-    where: (field: string, operator: string, value: any) => any;
-    andWhere: (field: string, operator: string, value: any) => any;
-    from: (table: string) => any;
+    select: (columns: string[]) => QueryBuilder;
+    delete: (tableName: string) => QueryBuilder;
+    where: (field: string, operator: string, value: unknown) => QueryBuilder;
+    andWhere: (field: string, operator: string, value: unknown) => QueryBuilder;
+    from: (table: string) => QueryBuilder;
     execute: (adapter: DatabaseAdapter) => Promise<QueryResult>;
   };
   purgeExpiredData?: (adapter: DatabaseAdapter) => Promise<void>;
 }
+
+// Type alias for the QueryBuilder interface
+type QueryBuilder = {
+  select: (columns: string[]) => QueryBuilder;
+  delete: (tableName: string) => QueryBuilder;
+  where: (field: string, operator: string, value: unknown) => QueryBuilder;
+  andWhere: (field: string, operator: string, value: unknown) => QueryBuilder;
+  from: (table: string) => QueryBuilder;
+  execute: (adapter: DatabaseAdapter) => Promise<QueryResult>;
+};
 
 // Model interfaces with required methods for our example
 interface CustomerDataInterface extends BaseModel {
@@ -172,7 +183,7 @@ export class EnterpriseAdmin {
     const auditRecords: Record<string, unknown>[] = [];
 
     for (const model of models) {
-      const metadata = ModelRegistry.getModelMetadata(model);
+      const _metadata = ModelRegistry.getModelMetadata(model);
       const auditMeta = getMetadata("audited", model) as {
         enabled: boolean;
         auditTable: string;
@@ -235,7 +246,7 @@ export class EnterpriseAdmin {
 
     // Check each model
     for (const model of ModelRegistry.getAllModels()) {
-      const metadata = ModelRegistry.getModelMetadata(model);
+      const _metadata = ModelRegistry.getModelMetadata(model);
       const features = ModelRegistry.getFeatures(model);
 
       const modelReport = {
@@ -339,11 +350,11 @@ export class EnterpriseAdmin {
     );
 
     // Save the current tenant context
-    const originalTenantId = (globalThis as any).currentTenantId;
+    const originalTenantId = (globalThis as unknown as { currentTenantId: string }).currentTenantId;
 
     try {
       // Set the tenant context to the one being reset
-      (globalThis as any).currentTenantId = tenantId;
+      (globalThis as unknown as { currentTenantId: string }).currentTenantId = tenantId;
 
       // For each tenant-scoped model, delete all records
       for (const model of tenantModels) {
@@ -371,7 +382,7 @@ export class EnterpriseAdmin {
       return results;
     } finally {
       // Restore the original tenant context
-      (globalThis as any).currentTenantId = originalTenantId;
+      (globalThis as unknown as { currentTenantId: string }).currentTenantId = originalTenantId;
     }
   }
 }
@@ -419,35 +430,39 @@ export class EnterpriseExample {
       deletedAt!: Date | null;
 
       // Implementing required methods from BaseModel interface
-      override async save(adapter: DatabaseAdapter): Promise<void> {
+      override save(_adapter: DatabaseAdapter): Promise<void> {
         // Implementation would be in BaseModel or added here
         console.log("Saving customer data");
+        return Promise.resolve();
       }
 
-      override async delete(adapter: DatabaseAdapter): Promise<void> {
+      override delete(_adapter: DatabaseAdapter): Promise<void> {
         // Implementation would be in BaseModel or added here
         console.log("Deleting customer data");
+        return Promise.resolve();
       }
 
-      async restore(adapter: DatabaseAdapter): Promise<void> {
+      restore(_adapter: DatabaseAdapter): Promise<void> {
         // Implementation for soft delete restore
         console.log("Restoring customer data");
+        return Promise.resolve();
       }
 
-      async getVersions(
-        adapter: DatabaseAdapter,
+      getVersions(
+        _adapter: DatabaseAdapter,
       ): Promise<Array<{ version_number: number }>> {
         // Implementation for versioning
         console.log("Getting versions");
-        return [{ version_number: 1 }];
+        return Promise.resolve([{ version_number: 1 }]);
       }
 
-      async restoreVersion(
-        adapter: DatabaseAdapter,
+      restoreVersion(
+        _adapter: DatabaseAdapter,
         versionNumber: number,
       ): Promise<void> {
         // Implementation for version restore
         console.log(`Restoring to version ${versionNumber}`);
+        return Promise.resolve();
       }
     }
 

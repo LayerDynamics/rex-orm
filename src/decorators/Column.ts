@@ -10,7 +10,7 @@ export interface ColumnOptions {
 }
 
 export function Column(options: ColumnOptions = {}): PropertyDecorator {
-  return (target: Object, propertyKey: string | symbol) => {
+  return (target: object, propertyKey: string | symbol) => {
     const columns = Reflect.getMetadata("columns", target.constructor) || [];
 
     // Infer the type from the property if not explicitly provided
@@ -33,10 +33,10 @@ export function Column(options: ColumnOptions = {}): PropertyDecorator {
 }
 
 // Helper function to convert TypeScript types to database column types
-function getTypeFromMetadata(type: any): string {
+function getTypeFromMetadata(type: unknown): string {
   if (!type) return "TEXT";
 
-  const typeName = type.name?.toLowerCase();
+  const typeName = (type as { name?: string }).name?.toLowerCase();
   switch (typeName) {
     case "number":
       return "NUMERIC";

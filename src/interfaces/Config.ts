@@ -53,5 +53,5 @@ export interface Config {
    * Additional configuration options that can be used by adapters
    * or other components
    */
-  [key: string]: any;
+  [key: string]: unknown;
 }

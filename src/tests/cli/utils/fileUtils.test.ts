@@ -1,13 +1,13 @@
 // src/tests/unit/cli/utils/fileUtils.test.ts
 
-import { assertEquals, assertExists } from "../../../deps.ts";
+import { assertEquals, assertExists as _assertExists } from "../../../deps.ts";
 import {
   createDirectory,
   toPascalCase,
   writeFileIfNotExists,
 } from "../../../cli/utils/fileUtils.ts";
 import { exists } from "https://deno.land/std@0.203.0/fs/mod.ts";
-import { join } from "https://deno.land/std@0.203.0/path/mod.ts";
+import { join as _join } from "https://deno.land/std@0.203.0/path/mod.ts";
 
 Deno.test("createDirectory creates a new directory if it does not exist", async () => {
   const testDir = "./test_create_directory";

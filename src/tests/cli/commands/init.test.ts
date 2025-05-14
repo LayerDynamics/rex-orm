@@ -1,13 +1,16 @@
 // src/tests/unit/cli/commands/init.test.ts
 
-import { assertEquals, assertExists } from "../../../deps.ts";
+import { assertEquals } from "../../../deps.ts";
 import { initCommand } from "../../../cli/commands/init.ts";
 import { exists } from "https://deno.land/std@0.203.0/fs/mod.ts";
 import { join } from "https://deno.land/std@0.203.0/path/mod.ts";
 
-// Add mock for Deno.readSync at the beginning
-// @ts-ignore
-Deno.readSync = () => new Uint8Array();
+// Set up mock for input handling - using a more modern approach
+// Create a mock ReadableStream that returns empty values for testing
+const mockStream = new TransformStream();
+const _mockReader = mockStream.readable.getReader();
+// @ts-ignore - Required for testing to replace the stdin reader
+Deno.stdin.readSync = () => new Uint8Array();
 
 Deno.test("init command initializes a new Rex-ORM project correctly", async () => {
   const testDir = "./test_project_init";

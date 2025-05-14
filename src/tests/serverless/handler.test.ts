@@ -12,7 +12,6 @@ import { Column, Entity, PrimaryKey } from "../../decorators/index.ts";
 import { ModelRegistry } from "../../models/ModelRegistry.ts";
 import { Post } from "../../models/Post.ts";
 import { User } from "../../models/User.ts";
-import type { ModelEvent } from "../../models/types.ts";
 import type { WebSocketResponse } from "../../realtime/index.ts";
 import type { RealTimeSync } from "../../realtime/RealTimeSync.ts";
 
@@ -79,19 +78,19 @@ const mockWebSocketServer = {
 
 // Mock RealTimeSync implementation that only exposes public API
 const mockRealTimeSync = {
-  connect: async (connectionId: string): Promise<WebSocketResponse> => {
+  connect: (connectionId: string): Promise<WebSocketResponse> => {
     activeConnections.add(connectionId);
-    return {
+    return Promise.resolve({
       statusCode: 200,
       body: "Connected",
-    };
+    });
   },
-  disconnect: async (connectionId: string): Promise<WebSocketResponse> => {
+  disconnect: (connectionId: string): Promise<WebSocketResponse> => {
     activeConnections.delete(connectionId);
-    return {
+    return Promise.resolve({
       statusCode: 200,
       body: "Disconnected",
-    };
+    });
   },
   message: async (
     _connectionId: string,

@@ -53,7 +53,8 @@ async function initialize() {
       name: "Query",
       fields: () => {
         // Convert schemaConfig.queries into proper field configurations
-        const queryFields: graphqlDeno.GraphQLFieldConfigMap<any, any> = {};
+        const queryFields: graphqlDeno.GraphQLFieldConfigMap<unknown, unknown> =
+          {};
 
         // Add all schema query fields
         Object.entries(schemaConfig.queries).forEach(
@@ -99,7 +100,10 @@ async function initialize() {
       name: "Mutation",
       fields: () => {
         // Convert schemaConfig.mutations into proper field configurations
-        const mutationFields: graphqlDeno.GraphQLFieldConfigMap<any, any> = {};
+        const mutationFields: graphqlDeno.GraphQLFieldConfigMap<
+          unknown,
+          unknown
+        > = {};
 
         // Add all schema mutation fields with proper type conversion
         Object.entries(schemaConfig.mutations).forEach(
@@ -144,11 +148,11 @@ async function initialize() {
 }
 
 // GraphQL handler implementation
-export const graphqlHandler = async (event: any, context: any) => {
+export const graphqlHandler = async (event: unknown, _context: unknown) => {
   await initialize();
 
   // Handle CORS preflight requests
-  if (event.httpMethod === "OPTIONS") {
+  if ((event as { httpMethod?: string }).httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
       headers: {
@@ -204,7 +208,7 @@ export const graphqlHandler = async (event: any, context: any) => {
   }
 };
 
-export const realtimeHandler = async (event: any, context: any) => {
+export const realtimeHandler = async (event: unknown, _context: unknown) => {
   await initialize();
 
   if (!event.requestContext) {
@@ -218,14 +222,15 @@ export const realtimeHandler = async (event: any, context: any) => {
 
   try {
     switch (eventType) {
-      case "CONNECT":
+      case "CONNECT": {
         await realTimeSync.connect(connectionId);
         return {
           statusCode: 200,
           body: "Connected",
         };
+      }
 
-      case "MESSAGE":
+      case "MESSAGE": {
         if (!event.body) {
           return {
             statusCode: 400,
@@ -238,13 +243,15 @@ export const realtimeHandler = async (event: any, context: any) => {
           statusCode: 200,
           body: "Message processed",
         };
+      }
 
-      case "DISCONNECT":
+      case "DISCONNECT": {
         await realTimeSync.disconnect(connectionId);
         return {
           statusCode: 200,
           body: "Disconnected",
         };
+      }
 
       default:
         return {

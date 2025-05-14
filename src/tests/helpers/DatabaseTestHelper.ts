@@ -1,6 +1,6 @@
 import { DatabaseAdapter } from "../../interfaces/DatabaseAdapter.ts";
 import { MigrationTracker } from "../../migration/MigrationTracker.ts";
-import { exists } from "https://deno.land/std@0.203.0/fs/mod.ts";
+import { exists as _exists } from "https://deno.land/std@0.203.0/fs/mod.ts";
 import { join } from "https://deno.land/std@0.203.0/path/mod.ts";
 import { ensureDir } from "https://deno.land/std@0.203.0/fs/mod.ts";
 

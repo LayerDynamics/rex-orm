@@ -48,6 +48,28 @@ export interface BenchmarkResult {
   operation: string;
 }
 
+// Define baseline result type
+interface BaselineResult {
+  name: string;
+  sqlite?: {
+    meanMs: number;
+    totalMs: number;
+    runsCount: number;
+  };
+  postgres?: {
+    meanMs: number;
+    totalMs: number;
+    runsCount: number;
+  };
+  category: string;
+  operation: string;
+}
+
+interface Baseline {
+  results: BaselineResult[];
+  [key: string]: unknown;
+}
+
 // Global results collection
 export const benchmarkResults: BenchmarkResult[] = [];
 
@@ -88,10 +110,10 @@ if (args.help) {
 }
 
 // Load baseline results for comparison
-async function loadBaseline(): Promise<Record<string, any>> {
+async function loadBaseline(): Promise<Baseline> {
   try {
     const baselineText = await Deno.readTextFile("./bench/baseline.json");
-    return JSON.parse(baselineText);
+    return JSON.parse(baselineText) as Baseline;
   } catch {
     return { results: [] };
   }
@@ -99,17 +121,17 @@ async function loadBaseline(): Promise<Record<string, any>> {
 
 // Find baseline result for a benchmark
 function findBaselineResult(
-  baseline: Record<string, any>,
+  baseline: Baseline,
   name: string,
-): Record<string, any> | undefined {
+): BaselineResult | undefined {
   if (!baseline.results) return undefined;
-  return baseline.results.find((result: any) => result.name === name);
+  return baseline.results.find((result) => result.name === name);
 }
 
 // Generate the benchmark report
 function generateReport(
   results: BenchmarkResult[],
-  baseline?: Record<string, any>,
+  baseline?: Baseline,
 ): void {
   // Group benchmarks by category
   const categories = [...new Set(results.map((r) => r.category))].sort();

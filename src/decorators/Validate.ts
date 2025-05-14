@@ -1,7 +1,7 @@
 import { defineMetadata, getMetadata } from "../deps.ts";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 
-type ValidationFunction = (value: any) => boolean | string;
+type ValidationFunction = (value: unknown) => boolean | string;
 
 interface ValidateOptions {
   validator: ValidationFunction;
@@ -9,7 +9,7 @@ interface ValidateOptions {
 }
 
 export function Validate(options: ValidateOptions) {
-  return function (target: any, propertyKey: string) {
+  return function (target: object, propertyKey: string) {
     if (!getMetadata("validations", target.constructor)) {
       defineMetadata("validations", {}, target.constructor);
     }

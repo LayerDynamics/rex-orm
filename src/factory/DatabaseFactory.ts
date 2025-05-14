@@ -12,11 +12,11 @@ export type DatabaseConfig = {
   host?: string;
   port?: number;
   databaseName?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export class DatabaseFactory {
-  static create(arg0: { type: string; database: string; }) {
+  static create(_arg0: { type: string; database: string }) {
     throw new Error("Method not implemented.");
   }
   private static instances: Map<string, DatabaseAdapter> = new Map();

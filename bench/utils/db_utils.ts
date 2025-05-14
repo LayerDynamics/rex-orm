@@ -2,10 +2,11 @@
 import { DatabaseFactory } from "../../src/factory/DatabaseFactory.ts";
 import { addResult, dbConfigs } from "../run_benchmarks.ts";
 import { colors } from "https://deno.land/x/cliffy@v1.0.0-rc.3/ansi/colors.ts";
+import { DatabaseAdapter } from "../../src/interfaces/DatabaseAdapter.ts";
 
 // Extended database adapter with benchmark type tracking
 export interface BenchAdapter {
-  adapter: any;
+  adapter: DatabaseAdapter;
   type: "sqlite" | "postgres";
 }
 
@@ -91,7 +92,7 @@ export async function runBenchmarkWithBothAdapters(
   };
 
   // Test with SQLite
-  const startSqlite = performance.now();
+  const _startSqlite = performance.now();
   try {
     const sqliteAdapter = await tryGetSQLiteAdapter();
     if (sqliteAdapter) {
@@ -119,10 +120,10 @@ export async function runBenchmarkWithBothAdapters(
       error: errorMessage,
     };
   }
-  const endSqlite = performance.now();
+  const _endSqlite = performance.now();
 
   // Test with PostgreSQL
-  const startPostgres = performance.now();
+  const _startPostgres = performance.now();
   try {
     const postgresAdapter = await tryGetPostgresAdapter();
     if (postgresAdapter) {
@@ -150,7 +151,7 @@ export async function runBenchmarkWithBothAdapters(
       error: errorMessage,
     };
   }
-  const endPostgres = performance.now();
+  const _endPostgres = performance.now();
 
   // Add result to global collection
   addResult(result);

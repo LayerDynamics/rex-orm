@@ -4,7 +4,8 @@ import "reflect-metadata";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 import { BaseModel } from "../models/BaseModel.ts";
 import { getErrorMessage } from "../utils/error_utils.ts";
-import { defineMetadata, getMetadata } from "../deps.ts";
+import { defineMetadata } from "../deps.ts";
+import type { DatabaseAdapter } from "../interfaces/DatabaseAdapter.ts";
 
 // Define the Constructor type needed for ModelRegistry
 type Constructor<T = unknown> = { new (...args: unknown[]): T };
@@ -29,7 +30,7 @@ export function Versioned(options: {
           constructor as unknown as Constructor,
         );
         versionTable = `${metadata.tableName}_versions`;
-      } catch (e) {
+      } catch (_e) {
         // If model isn't registered yet, use the class name to derive table name
         versionTable = `${constructor.name.toLowerCase()}_versions`;
       }
@@ -43,9 +44,9 @@ export function Versioned(options: {
 
     // Override save to create versions
     const originalSave = constructor.prototype.save;
-    constructor.prototype.save = async function (adapter: any): Promise<void> {
+    constructor.prototype.save = async function (adapter: DatabaseAdapter): Promise<void> {
       // Only create a version for updates, not inserts
-      const checkIsNew = () => (this as any).id === undefined || (this as any).id === null || (this as any).id === 0;
+      const checkIsNew = () => (this as BaseModel).id === undefined || (this as BaseModel).id === null || (this as BaseModel).id === 0;
       
       if (!checkIsNew()) {
         // Create a snapshot of the current state before changes
@@ -57,9 +58,9 @@ export function Versioned(options: {
           created_by: adapter.context?.userId || null,
         };
 
-        if (typeof (constructor as any).createQueryBuilder === "function") {
+        if (typeof (constructor as Record<string, unknown>).createQueryBuilder === "function") {
           // Get the latest version number
-          const qb = (constructor as any).createQueryBuilder();
+          const qb = (constructor as Record<string, unknown>).createQueryBuilder();
           const result = await qb
             .select(["MAX(version_number) as max_version"])
             .from(versionTable)
@@ -132,11 +133,11 @@ export function Versioned(options: {
     (constructor.prototype as unknown as Record<string, unknown>)[
       "getVersions"
     ] = async function getVersionsMethod(
-      adapter: any,
+      adapter: DatabaseAdapter,
       limit?: number,
-    ): Promise<any[]> {
-      if (typeof (constructor as any).createQueryBuilder === "function") {
-        const qb = (constructor as any).createQueryBuilder();
+    ): Promise<unknown[]> {
+      if (typeof (constructor as Record<string, unknown>).createQueryBuilder === "function") {
+        const qb = (constructor as Record<string, unknown>).createQueryBuilder();
         qb.select(["*"])
           .from(versionTable)
           .where("entity_id", "=", this.id)
@@ -175,13 +176,13 @@ export function Versioned(options: {
     (constructor.prototype as unknown as Record<string, unknown>)[
       "restoreVersion"
     ] = async function restoreVersionMethod(
-      adapter: any,
+      adapter: DatabaseAdapter,
       versionNumber: number,
     ): Promise<void> {
       let versionData;
 
-      if (typeof (constructor as any).createQueryBuilder === "function") {
-        const qb = (constructor as any).createQueryBuilder();
+      if (typeof (constructor as { createQueryBuilder?: () => unknown }).createQueryBuilder === "function") {
+        const qb = (constructor as { createQueryBuilder: () => unknown }).createQueryBuilder();
         const result = await qb
           .select(["*"])
           .from(versionTable)

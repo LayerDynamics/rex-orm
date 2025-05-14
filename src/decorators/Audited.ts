@@ -3,11 +3,28 @@
 import "reflect-metadata";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 import { BaseModel } from "../models/BaseModel.ts";
-import { getErrorMessage } from "../utils/error_utils.ts";
-import { defineMetadata, getMetadata } from "../deps.ts";
+import { getErrorMessage as _getErrorMessage } from "../utils/error_utils.ts";
+import { defineMetadata, getMetadata as _getMetadata } from "../deps.ts";
 
 // Import Constructor type from ModelRegistry or define it here
 type Constructor<T = unknown> = { new (...args: unknown[]): T };
+
+// Define DatabaseAdapter interface for use in the decorator
+interface DatabaseAdapter {
+  execute: (query: string, params?: unknown[]) => Promise<unknown>;
+  context?: {
+    userId?: string;
+    [key: string]: unknown;
+  };
+}
+
+// Define model instance with property access
+interface ModelInstance {
+  id?: number | string;
+  _originalValues?: Record<string, unknown>;
+  constructor: { name: string };
+  [key: string]: unknown;
+}
 
 /**
  * 3. AUDIT LOGGING IMPLEMENTATION
@@ -32,7 +49,7 @@ export function Audited(options: {
           constructor as unknown as Constructor,
         );
         auditTable = `${metadata.tableName}_audit`;
-      } catch (e) {
+      } catch (_e) {
         // If model isn't registered yet, use the class name to derive table name
         auditTable = `${constructor.name.toLowerCase()}_audit`;
       }
@@ -47,14 +64,14 @@ export function Audited(options: {
 
     // Override save method to create audit records
     const originalSave = constructor.prototype.save;
-    constructor.prototype.save = async function (adapter: any): Promise<void> {
+    constructor.prototype.save = async function (adapter: DatabaseAdapter): Promise<void> {
       // Create a public getter for accessing protected properties
-      const getOriginalValues = () => (this as any)._originalValues;
-      const setOriginalValues = (values: Record<string, any>) =>
-        (this as any)._originalValues = values;
+      const getOriginalValues = () => (this as ModelInstance)._originalValues;
+      const setOriginalValues = (values: Record<string, unknown>) =>
+        (this as ModelInstance)._originalValues = values;
       const checkIsNew = () =>
-        (this as any).id === undefined || (this as any).id === null ||
-        (this as any).id === 0;
+        (this as ModelInstance).id === undefined || (this as ModelInstance).id === null ||
+        (this as ModelInstance).id === 0;
 
       if (!getOriginalValues()) {
         setOriginalValues({});
@@ -65,7 +82,7 @@ export function Audited(options: {
       const action = isNew ? "INSERT" : "UPDATE";
 
       // Create an audit record with changes
-      const changes: Record<string, { old: any; new: any }> = {};
+      const changes: Record<string, { old: unknown; new: unknown }> = {};
       if (!isNew) {
         // For updates, calculate what changed
         const metadata = ModelRegistry.getModelMetadata(
@@ -80,11 +97,11 @@ export function Audited(options: {
           // If field changed, record the change
           if (
             getOriginalValues()[field] !== undefined &&
-            getOriginalValues()[field] !== (this as any)[field]
+            getOriginalValues()[field] !== (this as ModelInstance)[field]
           ) {
             changes[field] = {
               old: getOriginalValues()[field],
-              new: (this as any)[field],
+              new: (this as ModelInstance)[field],
             };
           }
         }
@@ -99,10 +116,10 @@ export function Audited(options: {
           // Skip excluded fields
           if (excludeFields.includes(field)) continue;
 
-          if ((this as any)[field] !== undefined) {
+          if ((this as ModelInstance)[field] !== undefined) {
             changes[field] = {
               old: null,
-              new: (this as any)[field],
+              new: (this as ModelInstance)[field],
             };
           }
         }
@@ -124,8 +141,8 @@ export function Audited(options: {
 
         // Insert audit record
         // Call QueryBuilder from BaseModel or add static method check
-        if (typeof (constructor as any).createQueryBuilder === "function") {
-          const qb = (constructor as any).createQueryBuilder();
+        if (typeof (constructor as unknown as { createQueryBuilder: () => unknown }).createQueryBuilder === "function") {
+          const qb = (constructor as unknown as { createQueryBuilder: () => unknown }).createQueryBuilder();
           await qb.insert(auditTable, auditData).execute(adapter);
         } else {
           // Fallback implementation if createQueryBuilder doesn't exist
@@ -151,7 +168,7 @@ export function Audited(options: {
     // Override delete to audit deletions
     const originalDelete = constructor.prototype.delete;
     constructor.prototype.delete = async function (
-      adapter: any,
+      adapter: DatabaseAdapter,
     ): Promise<void> {
       // Create an audit record for deletion
       const auditData = {
@@ -164,8 +181,8 @@ export function Audited(options: {
       };
 
       // Insert audit record
-      if (typeof (constructor as any).createQueryBuilder === "function") {
-        const qb = (constructor as any).createQueryBuilder();
+      if (typeof (constructor as unknown as { createQueryBuilder: () => unknown }).createQueryBuilder === "function") {
+        const qb = (constructor as unknown as { createQueryBuilder: () => unknown }).createQueryBuilder();
         await qb.insert(auditTable, auditData).execute(adapter);
       } else {
         // Fallback implementation if createQueryBuilder doesn't exist

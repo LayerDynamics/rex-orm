@@ -50,10 +50,15 @@ export function DataRetention(options: {
     // Add static method to purge expired data if it doesn't exist yet
     // First convert to unknown then to our expected shape to avoid direct casting
     const constructorAny = target.constructor as unknown;
+    
+    // Define the type for a constructor with purgeExpiredData method
+    interface ConstructorWithPurgeMethod {
+      purgeExpiredData?: (adapter: unknown) => Promise<void>;
+    }
 
     // Check if the method already exists
-    if (typeof (constructorAny as any).purgeExpiredData !== "function") {
-      (constructorAny as any).purgeExpiredData = async function (
+    if (typeof (constructorAny as ConstructorWithPurgeMethod).purgeExpiredData !== "function") {
+      (constructorAny as ConstructorWithPurgeMethod).purgeExpiredData = async function (
         adapter: unknown,
       ) {
         const retentionPolicies = getMetadata("dataRetention", this) as Record<

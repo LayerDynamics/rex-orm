@@ -433,7 +433,7 @@ async function cleanupAdapter(
           await adapter.execute("DROP TABLE IF EXISTS users");
           await adapter.commit();
         }
-      } catch (error) {
+      } catch (_error) {
         // Try to rollback if possible
         try {
           await adapter.rollback();

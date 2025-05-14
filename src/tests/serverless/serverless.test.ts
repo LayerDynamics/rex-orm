@@ -11,7 +11,7 @@ Deno.test({
   name: "Serverless Configuration Tests",
   async fn(t) {
     const configContent = await Deno.readTextFile(serverlessConfigPath);
-    const config = parse(configContent) as Record<string, any>;
+    const config = parse(configContent) as Record<string, unknown>;
 
     await t.step("validate basic configuration", () => {
       assertEquals(config.service, "rex-orm-service");

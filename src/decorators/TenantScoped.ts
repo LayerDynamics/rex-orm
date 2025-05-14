@@ -1,8 +1,8 @@
 import "reflect-metadata";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 import { BaseModel } from "../models/BaseModel.ts";
-import { getErrorMessage } from "../utils/error_utils.ts";
-import { defineMetadata, getMetadata } from "../deps.ts";
+import { defineMetadata } from "../deps.ts";
+import { DatabaseAdapter } from "../interfaces/DatabaseAdapter.ts";
 
 // Define the Constructor type needed for ModelRegistry
 type Constructor<T = unknown> = { new (...args: unknown[]): T };
@@ -20,27 +20,40 @@ export function TenantScoped(options: { tenantIdField?: string } = {}) {
       tenantIdField,
     }, constructor);
 
+    // Define a more specific interface for the QueryBuilder based on what we use
+    interface QueryBuilder {
+      queryParts: {
+        where?: Array<{
+          column: string;
+          operator: string;
+          value: unknown;
+        }>;
+      };
+      andWhere: (column: string, operator: string, value: unknown) => QueryBuilder;
+      execute: (adapter: DatabaseAdapter) => Promise<unknown>;
+    }
+
     // Modify all query methods to include tenant filtering
-    if (typeof (constructor as any).createQueryBuilder === "function") {
+    if (typeof (constructor as typeof BaseModel & { createQueryBuilder: () => QueryBuilder }).createQueryBuilder === "function") {
       const originalCreateQueryBuilder =
-        (constructor as any).createQueryBuilder;
-      (constructor as any).createQueryBuilder = function (): any {
+        (constructor as typeof BaseModel & { createQueryBuilder: () => QueryBuilder }).createQueryBuilder;
+      (constructor as typeof BaseModel & { createQueryBuilder: () => QueryBuilder }).createQueryBuilder = function (): QueryBuilder {
         const qb = originalCreateQueryBuilder.call(this);
 
         // Store the original execute method
         const originalExecute = qb.execute;
 
         // Override execute to add tenant filtering if a tenant is set in the context
-        qb.execute = async function (adapter: any): Promise<any> {
+        qb.execute = function (adapter: DatabaseAdapter): Promise<unknown> {
           // Get the current tenant ID from the request context or global store
           const currentTenantId = adapter.context?.tenantId ||
-            (globalThis as any).currentTenantId;
+            (globalThis as { currentTenantId?: string }).currentTenantId;
 
           if (currentTenantId) {
             // Only add the tenant filter if not already present
             if (
               !this.queryParts.where ||
-              !this.queryParts.where.some((w: any) =>
+              !this.queryParts.where.some((w) =>
                 w.column === tenantIdField
               )
             ) {
@@ -62,20 +75,20 @@ export function TenantScoped(options: { tenantIdField?: string } = {}) {
 
     // Override save to ensure tenant ID is set
     const originalSave = constructor.prototype.save;
-    constructor.prototype.save = async function (adapter: any): Promise<void> {
+    constructor.prototype.save = async function (adapter: DatabaseAdapter): Promise<void> {
       // Get the current tenant ID
       const currentTenantId = adapter.context?.tenantId ||
-        (globalThis as any).currentTenantId;
+        (globalThis as { currentTenantId?: string }).currentTenantId;
 
       if (currentTenantId) {
         // Set the tenant ID on the model if not already set
-        if (!(this as any)[tenantIdField]) {
-          (this as any)[tenantIdField] = currentTenantId;
-        } else if ((this as any)[tenantIdField] !== currentTenantId) {
+        if (!(this as BaseModel & Record<string, unknown>)[tenantIdField]) {
+          (this as BaseModel & Record<string, unknown>)[tenantIdField] = currentTenantId;
+        } else if ((this as BaseModel & Record<string, unknown>)[tenantIdField] !== currentTenantId) {
           // Prevent cross-tenant operations
           throw new Error(
             `Cannot save entity to a different tenant (${
-              (this as any)[tenantIdField]
+              (this as BaseModel & Record<string, unknown>)[tenantIdField]
             }) than the current context (${currentTenantId})`,
           );
         }

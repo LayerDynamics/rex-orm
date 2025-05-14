@@ -1,5 +1,8 @@
 declare namespace Reflect {
-  function decorate(decorators: ClassDecorator[], target: Function): Function;
+  // Use a more specific type instead of Function
+  type Constructor<T = object> = new (...args: unknown[]) => T;
+  
+  function decorate(decorators: ClassDecorator[], target: Constructor): Constructor;
   function decorate(
     decorators: (PropertyDecorator | MethodDecorator)[],
     target: object,
@@ -7,66 +10,66 @@ declare namespace Reflect {
     attributes?: PropertyDescriptor,
   ): PropertyDescriptor | undefined;
 
-  function metadata(metadataKey: any, metadataValue: any): {
-    (target: Function): void;
+  function metadata(metadataKey: string | symbol, metadataValue: unknown): {
+    (target: Constructor): void;
     (target: object, propertyKey: string | symbol): void;
   };
 
   function defineMetadata(
-    metadataKey: any,
-    metadataValue: any,
+    metadataKey: string | symbol,
+    metadataValue: unknown,
     target: object,
   ): void;
   function defineMetadata(
-    metadataKey: any,
-    metadataValue: any,
+    metadataKey: string | symbol,
+    metadataValue: unknown,
     target: object,
     propertyKey: string | symbol,
   ): void;
 
-  function getMetadata(metadataKey: any, target: object): any;
+  function getMetadata(metadataKey: string | symbol, target: object): unknown;
   function getMetadata(
-    metadataKey: any,
+    metadataKey: string | symbol,
     target: object,
     propertyKey: string | symbol,
-  ): any;
+  ): unknown;
 
-  function getOwnMetadata(metadataKey: any, target: object): any;
+  function getOwnMetadata(metadataKey: string | symbol, target: object): unknown;
   function getOwnMetadata(
-    metadataKey: any,
+    metadataKey: string | symbol,
     target: object,
     propertyKey: string | symbol,
-  ): any;
+  ): unknown;
 
-  function hasMetadata(metadataKey: any, target: object): boolean;
+  function hasMetadata(metadataKey: string | symbol, target: object): boolean;
   function hasMetadata(
-    metadataKey: any,
+    metadataKey: string | symbol,
     target: object,
     propertyKey: string | symbol,
   ): boolean;
 
-  function hasOwnMetadata(metadataKey: any, target: object): boolean;
+  function hasOwnMetadata(metadataKey: string | symbol, target: object): boolean;
   function hasOwnMetadata(
-    metadataKey: any,
+    metadataKey: string | symbol,
     target: object,
     propertyKey: string | symbol,
   ): boolean;
 
-  function deleteMetadata(metadataKey: any, target: object): boolean;
+  function deleteMetadata(metadataKey: string | symbol, target: object): boolean;
   function deleteMetadata(
-    metadataKey: any,
+    metadataKey: string | symbol,
     target: object,
     propertyKey: string | symbol,
   ): boolean;
 
-  function getMetadataKeys(target: object): any[];
-  function getMetadataKeys(target: object, propertyKey: string | symbol): any[];
+  function getMetadataKeys(target: object): Array<string | symbol>;
+  function getMetadataKeys(target: object, propertyKey: string | symbol): Array<string | symbol>;
 
-  function getOwnMetadataKeys(target: object): any[];
+  function getOwnMetadataKeys(target: object): Array<string | symbol>;
   function getOwnMetadataKeys(
     target: object,
     propertyKey: string | symbol,
-  ): any[];
+  ): Array<string | symbol>;
 }
 
 interface DecoratorFactory {

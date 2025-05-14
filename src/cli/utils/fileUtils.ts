@@ -1,7 +1,7 @@
 // src/cli/utils/fileUtils.ts
 
 import { ensureDir, exists } from "https://deno.land/std@0.203.0/fs/mod.ts";
-import { join } from "https://deno.land/std@0.203.0/path/mod.ts";
+import { join as _join } from "https://deno.land/std@0.203.0/path/mod.ts";
 
 export async function createDirectory(path: string): Promise<void> {
   if (!(await exists(path))) {

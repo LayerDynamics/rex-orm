@@ -7,8 +7,8 @@ import {
   Select,
 } from "https://deno.land/x/cliffy@v1.0.0-rc.4/prompt/mod.ts";
 import { ensureDir, exists } from "https://deno.land/std@0.203.0/fs/mod.ts";
-import { extname } from "https://deno.land/std@0.203.0/path/mod.ts";
-import { BaseModel } from "../../models/BaseModel.ts";
+// BaseModel is needed as it's referenced in the template string
+import { BaseModel as _BaseModel } from "../../models/BaseModel.ts";
 
 interface GenerateModelArgs {
   modelName: string;

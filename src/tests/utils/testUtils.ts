@@ -6,8 +6,8 @@ import {
   DatabaseAdapter,
   DatabaseRecord,
   QueryParam,
-  QueryResult,
-  VectorCapabilities,
+  QueryResult as _QueryResult,
+  VectorCapabilities as _VectorCapabilities,
 } from "../../interfaces/DatabaseAdapter.ts";
 import { ModelRegistry } from "../../models/ModelRegistry.ts";
 import { User } from "../../models/User.ts";

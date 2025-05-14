@@ -2,12 +2,13 @@
 import { assertEquals } from "../../../deps.ts";
 import { MigrationTracker } from "../../../migration/MigrationTracker.ts";
 import { MockDatabaseAdapter } from "../../mocks/MockDatabaseAdapter.ts";
+import { QueryParam, QueryResult } from "../../../interfaces/DatabaseAdapter.ts";
 
 // Mock implementation of tableExists to make the test work
 class EnhancedMockAdapter extends MockDatabaseAdapter {
   tableExists = false;
 
-  override execute(query: string, params: any[] = []): Promise<any> {
+  override execute(query: string, params: QueryParam[] = []): Promise<QueryResult> {
     // Add special handling for table existence check
     if (query.includes("sqlite_master") || query.includes("SELECT 1 FROM")) {
       return Promise.resolve({

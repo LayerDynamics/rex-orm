@@ -26,7 +26,8 @@ Deno.test("CacheService throws error for unsupported cache type", () => {
   const cacheService = CacheService.getInstance();
   assertThrows(
     () => {
-      cacheService.initializeCache("unsupported" as any, {});
+      // Using type assertion with unknown first to be type-safe
+      cacheService.initializeCache("unsupported" as unknown as "in-memory" | "deno-kv", {});
     },
     Error,
     "Unsupported cache type: unsupported",

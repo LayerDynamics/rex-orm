@@ -4,12 +4,12 @@
 /**
  * The current version of Rex-ORM
  */
-export const VERSION = "0.1.1";
+export const VERSION = "0.1.2";
 
 /**
  * Release date of the current version
  */
-export const RELEASE_DATE = "2025-05-13";
+export const RELEASE_DATE = "2025-05-14";
 
 /**
  * Version metadata and compatibility information

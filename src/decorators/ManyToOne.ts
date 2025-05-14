@@ -1,31 +1,31 @@
 import { defineMetadata, getMetadata } from "../deps.ts";
 import { ModelRegistry } from "../models/ModelRegistry.ts";
 
-type Constructor<T = any> = { new (...args: any[]): T };
+type Constructor<T = unknown> = { new (...args: unknown[]): T };
 
 interface ManyToOneOptions {
   target: () => string;
-  inverse: (object: any) => any;
+  inverse: (object: unknown) => unknown;
 }
 
 // Fix the signature to accept options object instead of separate parameters
 export function ManyToOne(options: ManyToOneOptions): PropertyDecorator;
 export function ManyToOne(
-  targetClass: () => any,
+  targetClass: () => unknown,
   propertyName: string,
   options: ManyToOneOptions,
 ): PropertyDecorator;
 export function ManyToOne(
-  optionsOrTargetClass: ManyToOneOptions | (() => any),
+  optionsOrTargetClass: ManyToOneOptions | (() => unknown),
   propertyName?: string,
   options?: ManyToOneOptions,
 ): PropertyDecorator {
-  return function (target: any, propertyKey: string | symbol) {
+  return function (target: object, propertyKey: string | symbol) {
     if (!getMetadata("relations", target.constructor)) {
       defineMetadata("relations", [], target.constructor);
     }
 
-    const relations = getMetadata("relations", target.constructor) as any[];
+    const relations = getMetadata("relations", target.constructor) as Array<Record<string, unknown>>;
     let metadata;
 
     // Handle both forms of invocation
