@@ -5,11 +5,14 @@ import { WebSocketServer } from "../../../realtime/WebSocketServer.ts";
 import { EventEmitter } from "../../../realtime/EventEmitter.ts";
 import { SubscriptionManager } from "../../../realtime/SubscriptionManager.ts";
 import { Event } from "../../../realtime/types.ts";
-import { RawData, WebSocket } from "npm:ws@8.18.0";
 import { delay } from "https://deno.land/std@0.203.0/async/delay.ts";
+// Import the StandardWebSocketClient implementation from the websocket module
+import { StandardWebSocketClient } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 
+type RawData=string|Uint8Array;
 Deno.test({
   name: "WebSocketServer broadcasts events to subscribed clients",
+  ignore: !Deno.permissions || (await Deno.permissions.query({ name: "net" })).state !== "granted",
   async fn() {
     const port = 8081;
     const eventEmitter = new EventEmitter();
@@ -28,7 +31,7 @@ Deno.test({
 
       // Setup clients with event tracking
       const setupClient = async (eventTypes: string[]) => {
-        const ws = new WebSocket(`ws://localhost:${port}`);
+        const ws = new StandardWebSocketClient(`ws://localhost:${port}`);
         const events: Event[] = [];
 
         // Wait for connection
@@ -36,13 +39,34 @@ Deno.test({
 
         // Handle messages
         ws.on("message", (data: RawData) => {
-          const event = JSON.parse(data.toString());
-          // Only track non-connection related events
-          if (
-            !["connection", "subscription_success", "unsubscription_success"]
-              .includes(event.type)
-          ) {
-            events.push(event);
+          try {
+            // For the websocket library we're using, sometimes the data is already a MessageEvent
+            let jsonData: string;
+            
+            if (typeof data === 'object' && 'data' in data && typeof data.data === 'string') {
+              // It's a MessageEvent, extract the data property
+              jsonData = data.data;
+            } else if (typeof data === 'string') {
+              jsonData = data;
+            } else if (data instanceof Uint8Array) {
+              jsonData = new TextDecoder().decode(data);
+            } else {
+              // Convert to string as a last resort
+              jsonData = String(data);
+            }
+            
+            const event = JSON.parse(jsonData);
+            
+            // Only track non-connection related events
+            if (
+              !["connection", "subscription_success", "unsubscription_success"]
+                .includes(event.type)
+            ) {
+              events.push(event);
+            }
+          } catch (e) {
+            console.error("Error parsing WebSocket message:", e);
+            console.debug("Received message data:", data);
           }
         });
 

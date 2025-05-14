@@ -302,11 +302,11 @@ export class QueryBuilder {
 
     // Default configuration - generic SQL-compatible syntax
     "default": {
-      knnSyntax: "/* Vector search not configured */",
-      distanceSyntax: "/* Vector distance not configured */",
-      similaritySyntax: "/* Vector similarity not configured */",
-      vectorMatchSyntax: "/* Vector match not configured */",
-      embeddingSearchSyntax: "/* Vector embedding not configured */",
+      knnSyntax: "SIMILARITY({column}, {vector}) DESC LIMIT {k}",
+      distanceSyntax: "DISTANCE({column}, {vector}) AS distance",
+      similaritySyntax: "SIMILARITY({column}, {vector}) AS similarity",
+      vectorMatchSyntax: "SIMILARITY({column}, {vector}) > {threshold}",
+      embeddingSearchSyntax: "SIMILARITY({column}, {vector}) AS score",
       formatVector: (vector) => {
         if (typeof vector === "string") return vector;
         return `'[${vector.join(",")}]'`;
@@ -315,16 +315,6 @@ export class QueryBuilder {
       defaultK: 10,
       defaultThreshold: 0.3,
       placement: "WHERE",
-      customFormatter: (_op, paramIndex) => {
-        console.warn(
-          "Vector operations are not properly configured. Please set a vector database configuration.",
-        );
-        return {
-          clause: `/* Vector operations not configured */`,
-          params: [],
-          nextParamIndex: paramIndex,
-        };
-      },
     },
   };
 

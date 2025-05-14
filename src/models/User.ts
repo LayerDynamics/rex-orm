@@ -16,7 +16,7 @@ export class User extends BaseModel implements IUser {
 
   @OneToMany({
     target: () => "Post",
-    inverse: (post: Post) => post.user,
+    inverse: (object: unknown) => (object as Post).user,
   })
   posts!: Post[];
 

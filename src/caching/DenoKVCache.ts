@@ -22,7 +22,12 @@ export class DenoKVCache implements CacheAdapter {
 
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
     if (!this.kv) throw new Error("Cache not connected");
-    const options = ttl ? { expireIn: ttl } : undefined;
+    
+    // Use the provided TTL, fall back to the default TTL if available
+    const expireIn = ttl !== undefined ? ttl : 
+                    this.defaultTtl !== undefined ? this.defaultTtl * 1000 : undefined;
+    
+    const options = expireIn !== undefined ? { expireIn } : undefined;
     await this.kv.set([key], value, options);
   }
 

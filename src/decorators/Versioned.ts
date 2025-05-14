@@ -45,7 +45,9 @@ export function Versioned(options: {
     const originalSave = constructor.prototype.save;
     constructor.prototype.save = async function (adapter: any): Promise<void> {
       // Only create a version for updates, not inserts
-      if (!this.isNew()) {
+      const checkIsNew = () => (this as any).id === undefined || (this as any).id === null || (this as any).id === 0;
+      
+      if (!checkIsNew()) {
         // Create a snapshot of the current state before changes
         const currentVersion = {
           entity_id: this.id,
